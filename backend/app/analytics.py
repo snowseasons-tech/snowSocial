@@ -12,6 +12,7 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
+from .auth import require_authenticated_user
 from .database import get_session
 from .models import (
     ChannelDelivery,
@@ -207,6 +208,7 @@ def import_metrics(
 def monthly_summary(
     month: date = Query(description="First day of the reporting month, for example 2026-11-01"),
     session: Session = Depends(get_session),
+    _: str = Depends(require_authenticated_user),
 ) -> MonthlySummary:
     if month.day != 1:
         raise HTTPException(status_code=422, detail="month must be the first day of the reporting month")
