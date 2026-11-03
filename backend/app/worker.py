@@ -12,8 +12,8 @@ from sqlalchemy.orm import Session
 
 from .analytics_sync import sync_recent_facebook_metrics, sync_recent_instagram_metrics
 from .database import SessionLocal, settings
-from .meta_publishers import FacebookPagePublisher, InstagramPhotoPublisher
 from .google_publishers import GoogleBusinessPublisher
+from .meta_publishers import FacebookPagePublisher, InstagramPhotoPublisher
 from .models import Channel, ChannelDelivery, DeliveryStatus, Post, PostStatus
 from .publishers import (
     PUBLISHERS,
