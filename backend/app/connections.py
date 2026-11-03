@@ -17,7 +17,7 @@ from sqlalchemy.orm import Mapped, Session, mapped_column
 
 from .database import Base, get_session
 
-router = APIRouter(prefix="/api/connections", tags=["connections"])
+router = APIRouter(prefix="/api/connections", tags=["connections"], dependencies=[Depends(require_authenticated_user)])
 META_GRAPH_VERSION = os.getenv("META_GRAPH_API_VERSION", "v26.0")
 META_DIALOG_URL = f"https://www.facebook.com/{META_GRAPH_VERSION}/dialog/oauth"
 META_GRAPH_URL = f"https://graph.facebook.com/{META_GRAPH_VERSION}"
