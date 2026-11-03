@@ -1,14 +1,23 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 
 from .analytics import router as analytics_router
 from .connections import router as connections_router
-from .database import SessionLocal
+from .database import SessionLocal, settings
 from .routes import router as posts_router
 
 app = FastAPI(title="SnowSocial API", version="0.2.0")
+cors_origins = [origin.strip() for origin in settings.cors_origins.split(",") if origin.strip()]
+if cors_origins:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=cors_origins,
+        allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+        allow_headers=["Content-Type", "X-Analytics-Ingest-Token"],
+    )
 app.include_router(posts_router)
 app.include_router(connections_router)
 app.include_router(analytics_router)
