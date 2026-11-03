@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f7f8fa">
+  <title>SnowSocial — Account Access &amp; Publishing Consent</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    :root{color-scheme:light}
+    body{background:#f7f8fa;color:#182230;font:15px/1.6 "DM Sans",Arial,sans-serif;margin:0}
+    .consent-shell{max-width:880px;margin:32px auto;padding:0 18px 48px}
+    .consent-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:22px}
+    .consent-brand{display:flex;align-items:center;gap:10px;color:#182230;text-decoration:none;font-weight:800}
+    .consent-brand .brand-mark{display:grid;place-items:center;width:38px;height:38px;border-radius:11px;background:#3767df;color:#fff}
+    .consent-card{background:#fff;border:1px solid #e2e7ef;border-radius:16px;padding:clamp(22px,5vw,42px);box-shadow:0 14px 40px #17233a0d}
+    h1,h2{font-family:Manrope,"DM Sans",Arial,sans-serif;line-height:1.2}
+    h1{font-size:clamp(28px,5vw,40px);margin:4px 0 12px}
+    h2{font-size:19px;margin:30px 0 10px}
+    p{margin:8px 0 14px}
+    .eyebrow{color:#3767df;font-size:12px;font-weight:800;letter-spacing:.11em;text-transform:uppercase}
+    .muted{color:#667085}
+    .notice{background:#f1f5ff;border-left:4px solid #3767df;border-radius:8px;padding:12px 15px;margin:22px 0}
+    .scope-list{padding-left:22px}
+    .scope-list li{margin:8px 0}
+    .channel-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px}
+    .channel{border:1px solid #e1e6ee;border-radius:10px;padding:12px}
+    .channel label{display:flex;align-items:center;gap:8px;font-weight:700}
+    .channel input[type="text"]{width:100%;box-sizing:border-box;margin-top:9px;padding:9px 10px;border:1px solid #dce2ea;border-radius:7px;font:inherit}
+    .check{display:flex;gap:10px;align-items:flex-start;margin:12px 0}
+    .check input{margin-top:5px;flex:none}
+    .field-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
+    .field label{display:block;font-size:13px;font-weight:700;margin:8px 0 5px}
+    .field input{box-sizing:border-box;width:100%;padding:10px 11px;border:1px solid #dce2ea;border-radius:7px;font:inherit}
+    .signature-line{height:32px;border-bottom:1px solid #667085}
+    .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:28px}
+    .actions button,.actions a{border:0;border-radius:8px;background:#3767df;color:#fff;padding:11px 16px;font:600 14px inherit;text-decoration:none;cursor:pointer}
+    .actions a{background:#eef2f8;color:#243047}
+    .small{font-size:12px;color:#667085}
+    @media print{
+      body{background:#fff;font-size:12px}
+      .consent-shell{max-width:none;margin:0;padding:0}
+      .consent-card{border:0;box-shadow:none;padding:0}
+      .screen-only{display:none!important}
+      h1{font-size:26px}
+      h2{font-size:16px;margin-top:18px}
+      .channel,.notice{break-inside:avoid}
+      input{print-color-adjust:exact}
+    }
+  </style>
+</head>
+<body>
+  <main class="consent-shell">
+    <div class="consent-top screen-only">
+      <a class="consent-brand" href="index.html"><span class="brand-mark">S</span><span>snow<span class="brand-light">social</span></span></a>
+      <a href="index.html">Back to sign in</a>
+    </div>
+    <article class="consent-card">
+      <p class="eyebrow">SnowSocial authorization</p>
+      <h1>Social account access &amp; publishing consent</h1>
+      <p>This form records permission for Snow Seasons Tech to use SnowSocial with the specific business accounts listed below. Platform authorization is completed separately through each platform's official connection flow.</p>
+
+      <div class="notice"><strong>Printable consent form.</strong> This page does not send or save the information entered here. Print or save a completed copy, sign it, and return it to the SnowSocial workspace administrator.</div>
+
+      <h2>1. Business and authorized representative</h2>
+      <div class="field-grid">
+        <div class="field"><label for="business">Business / legal name</label><input id="business" type="text"></div>
+        <div class="field"><label for="brand">Public brand name (if different)</label><input id="brand" type="text"></div>
+        <div class="field"><label for="representative">Authorized representative</label><input id="representative" type="text"></div>
+        <div class="field"><label for="role">Title or role</label><input id="role" type="text"></div>
+        <div class="field"><label for="email">Business email</label><input id="email" type="email"></div>
+        <div class="field"><label for="workspace">SnowSocial workspace</label><input id="workspace" type="text"></div>
+      </div>
+
+      <h2>2. Accounts covered by this authorization</h2>
+      <p class="muted">Select only the business profiles you authorize. Enter the profile or page name and, if available, its URL or provider account ID.</p>
+      <div class="channel-list">
+        <div class="channel"><label><input type="checkbox"> Facebook Page</label><input type="text" aria-label="Facebook Page name or URL" placeholder="Page name or URL"></div>
+        <div class="channel"><label><input type="checkbox"> Instagram professional account</label><input type="text" aria-label="Instagram account name or URL" placeholder="Username or profile URL"></div>
+        <div class="channel"><label><input type="checkbox"> Google Business Profile</label><input type="text" aria-label="Google Business Profile name or URL" placeholder="Business name or profile URL"></div>
+        <div class="channel"><label><input type="checkbox"> LinkedIn organization page</label><input type="text" aria-label="LinkedIn organization page name or URL" placeholder="Organization name or URL"></div>
+        <div class="channel"><label><input type="checkbox"> X account</label><input type="text" aria-label="X account name or URL" placeholder="@username or profile URL"></div>
+      </div>
+
+      <h2>3. What you authorize</h2>
+      <p>For the selected accounts, I authorize Snow Seasons Tech and its SnowSocial service to:</p>
+      <ul class="scope-list">
+        <li>Connect to the selected profiles through the platform's authorization flow and use the granted permissions to operate the service.</li>
+        <li>Prepare and edit social post drafts, schedule them, and publish them only after I or an authorized workspace administrator approves them in SnowSocial.</li>
+        <li>Access performance information the platforms make available for published posts and use it to prepare monthly summaries and post-level reports.</li>
+      </ul>
+      <p>Publishing formats and available metrics depend on the platform. SnowSocial currently supports Facebook text posts, Instagram single-image posts, Google Business Profile Local Posts, LinkedIn organization text posts, and X text posts. X analytics is optional and may incur provider usage charges if enabled.</p>
+
+      <h2>4. What is not authorized</h2>
+      <p>This consent does not authorize paid advertising or ad spend; reading or sending direct messages; replying to comments; changing account ownership, security settings, or profile information; deleting existing posts; or publishing content that has not been approved in SnowSocial.</p>
+
+      <h2>5. Access, security, and withdrawal</h2>
+      <ul class="scope-list">
+        <li>SnowSocial uses the platform's authorization flow; it does not ask for the platform account password. Provider access tokens are stored encrypted at rest.</li>
+        <li>You may withdraw access by revoking SnowSocial's authorization in the platform's connected-app settings and asking the workspace administrator to cancel future scheduled posts.</li>
+        <li>Revoking access can stop future publishing and reporting. Posts already published remain on the platform unless you remove them separately.</li>
+      </ul>
+
+      <h2>6. Confirmation and signature</h2>
+      <label class="check"><input type="checkbox"><span>I confirm that I am authorized to manage the business profiles selected above and grant this access on the business's behalf.</span></label>
+      <label class="check"><input type="checkbox"><span>I have reviewed the permitted activities and limits above, and I consent to them for the selected profiles.</span></label>
+      <div class="field-grid">
+        <div class="field"><label for="sign-name">Printed name</label><input id="sign-name" type="text"></div>
+        <div class="field"><label for="sign-date">Date</label><input id="sign-date" type="date"></div>
+      </div>
+      <div class="field" style="margin-top:18px"><label>Authorized representative signature</label><div class="signature-line"></div></div>
+
+      <p class="small" style="margin-top:22px">This authorization covers only the selected profiles and activities described above. It does not replace the platform's own permission screen or any separate service agreement.</p>
+      <div class="actions screen-only"><button type="button" onclick="window.print()">Print or save as PDF</button><a href="index.html">Back to SnowSocial</a></div>
+    </article>
+  </main>
+</body>
+</html>
