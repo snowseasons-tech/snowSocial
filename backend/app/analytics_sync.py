@@ -196,3 +196,148 @@ def sync_recent_instagram_metrics(*, batch_size: int) -> tuple[int, int]:
         failed,
     )
     return succeeded, failed
+
+
+def _facebook_connection() -> tuple[ChannelConnection, str] | None:
+    selected_page_id = os.getenv("META_FACEBOOK_PAGE_ID", "").strip()
+    statement = select(ChannelConnection).where(
+        ChannelConnection.provider == "meta",
+        ChannelConnection.channel == Channel.FACEBOOK.value,
+    )
+    if selected_page_id:
+        statement = statement.where(ChannelConnection.provider_account_id == selected_page_id)
+
+    with SessionLocal() as session:
+        connections = list(session.scalars(statement).all())
+        if len(connections) != 1:
+            if len(connections) > 1:
+                logger.warning("Facebook analytics needs META_FACEBOOK_PAGE_ID when multiple Pages are connected")
+            return None
+
+        connection = connections[0]
+        expires_at = connection.token_expires_at
+        if expires_at is not None:
+            if expires_at.tzinfo is None:
+                expires_at = expires_at.replace(tzinfo=UTC)
+            if expires_at <= datetime.now(UTC):
+                logger.warning("Facebook Page token has expired; reconnect the Meta account")
+                return None
+        try:
+            access_token = decrypt_access_token(connection)
+        except ValueError:
+            logger.exception("Could not decrypt the Facebook Page token for analytics")
+            return None
+        return connection, access_token
+
+
+def _facebook_post_counts(payload: dict) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    reactions = payload.get("reactions")
+    if isinstance(reactions, dict):
+        summary = reactions.get("summary")
+        if isinstance(summary, dict):
+            value = _count(summary.get("total_count"))
+            if value is not None:
+                counts["likes"] = value
+
+    comments = payload.get("comments")
+    if isinstance(comments, dict):
+        summary = comments.get("summary")
+        if isinstance(summary, dict):
+            value = _count(summary.get("total_count"))
+            if value is not None:
+                counts["comments"] = value
+
+    shares = payload.get("shares")
+    if isinstance(shares, dict):
+        value = _count(shares.get("count"))
+        if value is not None:
+            counts["shares"] = value
+    return counts
+
+
+def sync_recent_facebook_metrics(*, batch_size: int) -> tuple[int, int]:
+    """Refresh Facebook Page post reaction, comment, and share counts."""
+    account = _facebook_connection()
+    if account is None:
+        return 0, 0
+    connection, access_token = account
+    now = datetime.now(UTC)
+    cutoff = now - timedelta(days=METRIC_LOOKBACK_DAYS)
+    with SessionLocal() as session:
+        deliveries = list(
+            session.scalars(
+                select(ChannelDelivery)
+                .where(
+                    ChannelDelivery.channel == Channel.FACEBOOK,
+                    ChannelDelivery.status == DeliveryStatus.PUBLISHED,
+                    ChannelDelivery.platform_post_id.is_not(None),
+                    ChannelDelivery.published_at.is_not(None),
+                    ChannelDelivery.published_at >= cutoff,
+                )
+                .order_by(ChannelDelivery.published_at.desc())
+                .limit(batch_size)
+            ).all()
+        )
+
+    if not deliveries:
+        return 0, 0
+
+    base_url = f"https://graph.facebook.com/{GRAPH_VERSION}"
+    fields = "reactions.type(LIKE).limit(0).summary(total_count),comments.limit(0).summary(true),shares"
+    succeeded = 0
+    failed = 0
+    for delivery in deliveries:
+        post_id = quote(delivery.platform_post_id or "", safe="")
+        try:
+            post = _request_json(
+                f"{base_url}/{post_id}",
+                access_token=access_token,
+                params={"fields": fields},
+            )
+        except (httpx.HTTPError, ValueError, TypeError) as error:
+            logger.warning(
+                "Could not fetch Facebook post metrics for delivery %s (%s)",
+                delivery.id,
+                type(error).__name__,
+            )
+            failed += 1
+            continue
+
+        counts = _facebook_post_counts(post)
+        published_at = delivery.published_at
+        if published_at.tzinfo is None:
+            published_at = published_at.replace(tzinfo=UTC)
+        month = published_at.date().replace(day=1)
+        try:
+            with SessionLocal() as session:
+                metric = session.scalar(
+                    select(MonthlyPostMetric).where(
+                        MonthlyPostMetric.delivery_id == delivery.id,
+                        MonthlyPostMetric.month == month,
+                    )
+                )
+                if metric is None:
+                    metric = MonthlyPostMetric(delivery_id=delivery.id, month=month)
+                    session.add(metric)
+                for field in METRIC_FIELDS:
+                    if field in counts:
+                        setattr(metric, field, counts[field])
+                metric.imported_at = now
+                session.commit()
+            succeeded += 1
+        except Exception as error:  # noqa: BLE001 - keep one bad row from stopping the periodic sync
+            logger.warning(
+                "Could not save Facebook post metrics for delivery %s (%s)",
+                delivery.id,
+                type(error).__name__,
+            )
+            failed += 1
+
+    logger.info(
+        "Facebook analytics sync finished for Page %s: %s updated, %s failed",
+        connection.provider_account_id,
+        succeeded,
+        failed,
+    )
+    return succeeded, failed
