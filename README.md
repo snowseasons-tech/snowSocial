@@ -9,20 +9,40 @@ SnowSocial is a single-business social content planner for drafting posts, sched
 3. **Channel connections** — connect Facebook Pages and linked Instagram business accounts with Meta OAuth, encrypted token storage, and channel-specific content validation. *(Merged.)*
 4. **Monthly analytics** — import normalized post metrics and return month-over-month summaries. *(Merged.)*
 5. **Frontend integration** — replace browser-only storage with the API and display real post and delivery statuses. *(Merged.)*
-6. **Facebook publishing** — publish scheduled text posts to the connected Facebook Page and route uncertain results to review instead of blindly retrying. *(Previous PR.)*
+6. **Facebook publishing** — publish scheduled text posts to the connected Facebook Page and route uncertain results to review instead of blindly retrying. *(Merged.)*
 7. **Instagram publishing** — publish single-image posts using a public HTTPS image URL and Meta's media-container flow. *(Merged.)*
 8. **Google Business Profile publishing** — connect a profile, select a location, and publish scheduled standard Local Posts. *(Merged.)*
 9. **LinkedIn organization publishing** — connect one company page and publish scheduled text posts. *(Merged.)*
 10. **LinkedIn monthly analytics** — import organic organization share statistics into monthly channel summaries. *(Merged.)*
 11. **Single-admin authentication** — protect the workspace and API with an administrator session. *(Merged.)*
 12. **X publishing** — connect one X account through OAuth 2.0 and publish scheduled text posts. *(Merged.)*
-13. **X monthly analytics** — collect X post metrics into the existing monthly reports. *(This branch.)*
+13. **X monthly analytics** — collect X post metrics into the existing monthly reports. *(Merged.)*
+
+14. **Monthly report export** — download channel and post metrics, totals, previous-month values, and percentage changes as CSV. *(Merged.)*
+15. **Post-level monthly performance** — review published posts ranked by impressions with available platform metrics. *(Merged.)*
+
+## MVP scope
+
+The MVP supports one business workspace and one administrator login. It covers drafting and editing content, approval, scheduled publishing, delivery status and retry handling, five channel integrations, monthly performance summaries, post-level metrics, and CSV export.
+
+Publishing formats are intentionally limited: Facebook text, Instagram single-image posts, Google Business Profile Local Posts, LinkedIn organization text posts, and X text posts. Metrics depend on the provider's permissions and data availability. Facebook does not provide reach or impressions through this adapter; Google review insights are not imported; X analytics is opt-in because reads are metered. The app does not provide multiple users, role management, email reports, or a multi-client workspace.
+
+## Production setup
+
+1. Copy `.env.example` to `.env`. Set unique, strong values for `POSTGRES_PASSWORD`, `SNOWSOCIAL_ADMIN_USERNAME`, and `SNOWSOCIAL_ADMIN_PASSWORD`. Generate `TOKEN_ENCRYPTION_KEY` with `python -c 'from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())'`. Keep the key stable and back it up securely; changing it makes stored provider tokens unreadable.
+2. Set `SNOWSOCIAL_COOKIE_SECURE=true` in production. Put the API behind an HTTPS reverse proxy; the Compose API port binds to `127.0.0.1:8000`, and PostgreSQL is not published to the host. If the dashboard is hosted on a different origin, set `CORS_ORIGINS` to that exact HTTPS origin.
+3. Configure the OAuth credentials and exact callback URLs for each platform you plan to use. Complete provider access reviews and scopes as described below. Use the same `TOKEN_ENCRYPTION_KEY` for the API and worker.
+4. Start the full stack with `docker compose --profile publishing up --build -d`. This starts PostgreSQL, the API, and the publishing worker; database migrations run at container startup.
+5. Confirm `/api/health` reports healthy, sign in, connect the business accounts, then schedule a low-risk test post and verify its delivery status before relying on scheduled publishing.
+6. Back up the database before upgrades and regularly thereafter: `docker compose exec -T db pg_dump -U snowsocial_app snowsocial > snowsocial-backup.sql`. Store backups outside the host running the app.
+
+GitHub Actions checks frontend syntax, backend lint and syntax, database migrations, Compose configuration, and the API image build. CI does not publish to third-party platforms; validate each configured OAuth connection and publishing format with the real provider account before launch.
 
 ## Connect X
 
 Set `X_CLIENT_ID`, `X_CLIENT_SECRET`, `X_REDIRECT_URI`, and `X_FRONTEND_URL`. In the X Developer Console, enable OAuth 2.0 with the exact callback URI and request `tweet.read`, `tweet.write`, `users.read`, and `offline.access`. The app connects one authorized X account and publishes text-only posts; media URLs cannot be selected for X in this release. X's developer platform uses usage-based billing for reads and post creation. Analytics collection is disabled by default to avoid unexpected read charges. To enable it, set `X_ANALYTICS_ENABLED=true` on the worker and adjust `X_ANALYTICS_SYNC_INTERVAL_SECONDS` (default seven days). X analytics requires user-context access from the connected account; it refreshes published posts from the last 45 days and groups lifetime metrics by publication month. Review current API rates and credits before enabling.
 
-## Run the dashboard prototype
+## Run the dashboard locally
 
 Serve the dashboard at `http://localhost:8080` (for example, `python3 -m http.server 8080`) and run the API using the steps below. The dashboard reads and writes posts through the API; it no longer stores posts in browser local storage.
 
@@ -37,7 +57,7 @@ The optional worker service can be started with `docker compose --profile publis
 
 To enable LinkedIn publishing, configure `LINKEDIN_CLIENT_ID`, `LINKEDIN_CLIENT_SECRET`, `LINKEDIN_REDIRECT_URI`, `LINKEDIN_ORGANIZATION_ID`, and the same `TOKEN_ENCRYPTION_KEY` on API and worker. Set `LINKEDIN_API_VERSION` to a supported `YYYYMM` version. Add the exact redirect URL in your LinkedIn app and connect from the dashboard. Organization posting requires LinkedIn approval for the `w_organization_social` permission, and the authorizing member must have an eligible company-page role (Administrator, Content Admin, or Direct Sponsored Content Poster). LinkedIn access tokens expire; reconnect the organization when a scheduled delivery reports an expired token. This adapter publishes text-only posts. LinkedIn monthly analytics also require approval for `rw_organization_admin` and an organization Administrator role; reconnect the page after enabling this permission so the consented token includes the reporting scope.
 
-To enable Meta account linking, set `META_APP_ID`, `META_APP_SECRET`, `META_REDIRECT_URI`, `META_FRONTEND_URL`, and `TOKEN_ENCRYPTION_KEY` in the API environment. Instagram analytics also requests `instagram_manage_insights`; existing connections may need to reconnect to grant the added permission. Configure the exact redirect URI in the Meta developer app. Generate a Fernet key with `python -c 'from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())'`. Start account linking at `/api/connections/meta/authorize`, list connected accounts at `/api/connections`, and disconnect one with `DELETE /api/connections/{connection_id}`. The API stores tokens encrypted at rest; keep the API private until authentication is added.
+To enable Meta account linking, set `META_APP_ID`, `META_APP_SECRET`, `META_REDIRECT_URI`, `META_FRONTEND_URL`, and `TOKEN_ENCRYPTION_KEY` in the API environment. Instagram analytics also requests `instagram_manage_insights`; existing connections may need to reconnect to grant the added permission. Configure the exact redirect URI in the Meta developer app. Generate a Fernet key with `python -c 'from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())'`. Start account linking at `/api/connections/meta/authorize`, list connected accounts at `/api/connections`, and disconnect one with `DELETE /api/connections/{connection_id}`. The API stores provider tokens encrypted at rest. Workspace routes require the configured single-admin session.
 
 Monthly platform metrics can be imported with `POST /api/analytics/metrics` using the `X-Analytics-Ingest-Token` header and a payload containing published delivery IDs, the first day of each reporting month, and available counters (`impressions`, `reach`, `likes`, `comments`, `shares`, `saves`, and `link_clicks`). Set `ANALYTICS_INGEST_TOKEN` to a random secret of at least 32 characters. Re-importing the same delivery and month replaces that snapshot. Read the aggregate and previous-month comparison with `GET /api/analytics/monthly?month=YYYY-MM-01`. A missing metric remains `null`; percentage change is `null` when either month has no comparable value or the previous value is zero. Instagram post metrics are refreshed automatically by the publishing worker every 24 hours for published posts from the last 45 days. Each lifetime snapshot is grouped by the post's publication month; the report therefore summarizes content published in that month. Set `ANALYTICS_SYNC_INTERVAL_SECONDS` or `ANALYTICS_SYNC_BATCH_SIZE` to adjust collection. The automatic collector covers Instagram and Facebook Page posts, Google Business Profile location metrics, and LinkedIn organization share statistics. X post analytics can also be enabled explicitly with `X_ANALYTICS_ENABLED=true`; X reads are metered, so the default is off. Google profile summaries include Search/Maps impressions, website clicks, call-button clicks, and direction requests for the previous and current calendar month. LinkedIn summaries include organic impressions, unique impressions, clicks, likes, comments, and shares by calendar month for the rolling 12-month window. These are profile-level totals, not per-post insights. Enable the Business Profile Performance API and ensure the project has API access/quota; LinkedIn metrics require the `rw_organization_admin` scope and administrator access. Facebook snapshots include reactions, comments, and shares; reach and impressions are not collected by this adapter.
 
@@ -45,4 +65,4 @@ The dashboard now loads posts, account connections, and monthly totals from the 
 
 Pull requests and pushes to `main` run GitHub Actions checks for frontend syntax, backend lint and syntax, database migrations, Compose configuration, and the API image build.
 
-The API supports draft creation and editing, approval, future scheduling, cancellation, per-channel delivery records, connected Meta accounts, and monthly metric summaries. The dashboard reads posts, connection state, and summary totals from the API. The worker publishes text posts to Facebook Pages and LinkedIn organization pages, single-image feed posts to Instagram, and standard Local Posts to Google Business Profile. The API has no general user authentication, so keep it private.
+The API supports single-admin access, draft creation and editing, approval, future scheduling, cancellation, per-channel delivery records, connected platform accounts, monthly summaries, post-level performance, and CSV export. The dashboard reads posts, connection state, and reports from the API. The publishing worker supports Facebook text posts, Instagram single-image posts, Google Business Profile Local Posts, LinkedIn organization text posts, and X text posts. The MVP is ready to deploy after provider credentials, HTTPS, and account-specific permissions are configured.
