@@ -242,6 +242,7 @@
 
   function updateAnalytics(summary) {
     const totals = summary.totals;
+    document.querySelector('#publishedMetric').textContent = formatNumber(totals.published_posts);
     document.querySelector('#reachMetric').textContent = formatNumber(totals.reach);
     setChange(document.querySelector('#reachChange'), summary.change_percent.reach);
     const engagementChannels = summary.by_channel
