@@ -335,6 +335,9 @@
   document.querySelector('#connectChannel').addEventListener('click', () => {
     window.location.assign(`${API_BASE}/api/connections/meta/authorize`);
   });
+  document.querySelector('#connectGoogle').addEventListener('click', () => {
+    window.location.assign(`${API_BASE}/api/connections/google/authorize`);
+  });
   caption.addEventListener('input', () => {
     document.querySelector('#charCount').textContent = String(caption.value.length);
   });
@@ -347,9 +350,10 @@
   document.querySelector('#todayLabel').textContent = new Date().toLocaleDateString(undefined, {
     weekday: 'long', month: 'long', day: 'numeric', year: 'numeric'
   }).toUpperCase();
-  if (new URLSearchParams(window.location.search).get('connection') === 'meta') {
-    showToast('Meta channels connected.');
-    window.history.replaceState({}, document.title, window.location.pathname);
-  }
+  const connectionResult = new URLSearchParams(window.location.search).get('connection');
+  if (connectionResult === 'meta') showToast('Meta channels connected.');
+  if (connectionResult === 'google') showToast('Google Business Profile connected.');
+  if (connectionResult === 'google_error') showToast('Google authorization was not completed.');
+  if (connectionResult) window.history.replaceState({}, document.title, window.location.pathname);
   void refreshWorkspace();
 })();

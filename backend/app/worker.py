@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 
 from .analytics_sync import sync_recent_facebook_metrics, sync_recent_instagram_metrics
 from .database import SessionLocal, settings
+from .google_publishers import GoogleBusinessPublisher
 from .meta_publishers import FacebookPagePublisher, InstagramPhotoPublisher
 from .models import Channel, ChannelDelivery, DeliveryStatus, Post, PostStatus
 from .publishers import (
@@ -25,6 +26,7 @@ logger = logging.getLogger("snowsocial.worker")
 TERMINAL_DELIVERY_STATUSES = {DeliveryStatus.PUBLISHED, DeliveryStatus.FAILED, DeliveryStatus.NEEDS_REVIEW}
 PUBLISHERS[Channel.FACEBOOK] = FacebookPagePublisher()
 PUBLISHERS[Channel.INSTAGRAM] = InstagramPhotoPublisher()
+PUBLISHERS[Channel.GOOGLE_BUSINESS] = GoogleBusinessPublisher()
 
 
 @dataclass(frozen=True)

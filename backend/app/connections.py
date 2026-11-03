@@ -41,6 +41,7 @@ class ChannelConnection(Base):
     account_name: Mapped[str] = mapped_column(String(255), nullable=False)
     encrypted_access_token: Mapped[str] = mapped_column(String(4096), nullable=False)
     token_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    encrypted_refresh_token: Mapped[str | None] = mapped_column(String(4096), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC))
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC)
