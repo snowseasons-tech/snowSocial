@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 import os
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from urllib.parse import quote
 
 import httpx
@@ -10,7 +10,8 @@ from sqlalchemy import select
 
 from .connections import ChannelConnection, decrypt_access_token
 from .database import SessionLocal
-from .models import Channel, ChannelDelivery, DeliveryStatus, MonthlyPostMetric
+from .google_auth import get_google_access_token
+from .models import Channel, ChannelDelivery, DeliveryStatus, MonthlyChannelMetric, MonthlyPostMetric
 
 logger = logging.getLogger("snowsocial.analytics")
 GRAPH_VERSION = os.getenv("META_GRAPH_API_VERSION", "v26.0").strip()
@@ -336,6 +337,157 @@ def sync_recent_facebook_metrics(*, batch_size: int) -> tuple[int, int]:
 
     logger.info(
         "Facebook analytics sync finished for Page %s: %s updated, %s failed",
+        connection.provider_account_id,
+        succeeded,
+        failed,
+    )
+    return succeeded, failed
+
+
+
+GOOGLE_DAILY_METRICS = (
+    "BUSINESS_IMPRESSIONS_DESKTOP_MAPS",
+    "BUSINESS_IMPRESSIONS_DESKTOP_SEARCH",
+    "BUSINESS_IMPRESSIONS_MOBILE_MAPS",
+    "BUSINESS_IMPRESSIONS_MOBILE_SEARCH",
+    "WEBSITE_CLICKS",
+    "CALL_CLICKS",
+    "BUSINESS_DIRECTION_REQUESTS",
+)
+GOOGLE_METRIC_FIELDS = ("impressions", "link_clicks", "calls", "direction_requests")
+
+
+def _google_connection() -> ChannelConnection | None:
+    location_id = os.getenv("GOOGLE_BUSINESS_LOCATION_ID", "").strip()
+    statement = select(ChannelConnection).where(
+        ChannelConnection.provider == "google",
+        ChannelConnection.channel == Channel.GOOGLE_BUSINESS.value,
+    )
+    if location_id:
+        statement = statement.where(ChannelConnection.provider_account_id == location_id)
+    with SessionLocal() as session:
+        connections = list(session.scalars(statement).all())
+        if len(connections) != 1:
+            if len(connections) > 1:
+                logger.warning("Google Business analytics needs GOOGLE_BUSINESS_LOCATION_ID when multiple locations are connected")
+            return None
+        return connections[0]
+
+
+def sync_google_business_metrics() -> tuple[int, int]:
+    """Refresh profile-level Google metrics for the previous and current calendar month."""
+    connection = _google_connection()
+    if connection is None:
+        return 0, 0
+
+    today = datetime.now(UTC).date()
+    current_month = today.replace(day=1)
+    previous_month = (current_month - timedelta(days=1)).replace(day=1)
+    location_id = connection.provider_account_id.rsplit("/", 1)[-1]
+    resource_name = f"locations/{location_id}"
+    params: list[tuple[str, str]] = [("dailyMetrics", metric) for metric in GOOGLE_DAILY_METRICS]
+    for prefix, value in (
+        ("dailyRange.start_date", previous_month),
+        ("dailyRange.end_date", today),
+    ):
+        params.extend(
+            (f"{prefix}.{part}", str(number))
+            for part, number in (("year", value.year), ("month", value.month), ("day", value.day))
+        )
+
+    try:
+        with SessionLocal() as session:
+            managed_connection = session.get(ChannelConnection, connection.id)
+            if managed_connection is None:
+                return 0, 0
+            token = get_google_access_token(managed_connection, session)
+        response = httpx.get(
+            f"https://businessprofileperformance.googleapis.com/v1/{resource_name}:fetchMultiDailyMetricsTimeSeries",
+            headers={"Authorization": f"Bearer {token}"},
+            params=params,
+            timeout=httpx.Timeout(30.0, connect=5.0),
+        )
+        response.raise_for_status()
+        payload = response.json()
+        if not isinstance(payload, dict):
+            raise ValueError("Google returned an unexpected performance response")
+    except (httpx.HTTPError, ValueError, TypeError) as error:
+        logger.warning("Could not fetch Google Business metrics for location %s (%s)", connection.provider_account_id, type(error).__name__)
+        return 0, 1
+
+    totals_by_month: dict[date, dict[str, int]] = {
+        previous_month: {field: 0 for field in GOOGLE_METRIC_FIELDS},
+        current_month: {field: 0 for field in GOOGLE_METRIC_FIELDS},
+    }
+    field_by_metric = {
+        "BUSINESS_IMPRESSIONS_DESKTOP_MAPS": "impressions",
+        "BUSINESS_IMPRESSIONS_DESKTOP_SEARCH": "impressions",
+        "BUSINESS_IMPRESSIONS_MOBILE_MAPS": "impressions",
+        "BUSINESS_IMPRESSIONS_MOBILE_SEARCH": "impressions",
+        "WEBSITE_CLICKS": "link_clicks",
+        "CALL_CLICKS": "calls",
+        "BUSINESS_DIRECTION_REQUESTS": "direction_requests",
+    }
+    for metric_group in payload.get("multiDailyMetricTimeSeries", []):
+        if not isinstance(metric_group, dict):
+            continue
+        for series in metric_group.get("dailyMetricTimeSeries", []):
+            if not isinstance(series, dict):
+                continue
+            target_field = field_by_metric.get(series.get("dailyMetric"))
+            time_series = series.get("timeSeries")
+            dated_values = time_series.get("datedValues", []) if isinstance(time_series, dict) else []
+            if target_field is None or not isinstance(dated_values, list):
+                continue
+            for dated_value in dated_values:
+                if not isinstance(dated_value, dict) or not isinstance(dated_value.get("date"), dict):
+                    continue
+                value_date = dated_value["date"]
+                try:
+                    point_date = date(
+                        int(value_date["year"]),
+                        int(value_date["month"]),
+                        int(value_date.get("day", 1)),
+                    )
+                except (KeyError, TypeError, ValueError):
+                    continue
+                month = point_date.replace(day=1)
+                if month not in totals_by_month:
+                    continue
+                count = _count(dated_value.get("value"))
+                if count is not None:
+                    totals_by_month[month][target_field] += count
+
+    succeeded = 0
+    failed = 0
+    for month, counts in totals_by_month.items():
+        try:
+            with SessionLocal() as session:
+                metric = session.scalar(
+                    select(MonthlyChannelMetric).where(
+                        MonthlyChannelMetric.channel == Channel.GOOGLE_BUSINESS.value,
+                        MonthlyChannelMetric.provider_account_id == connection.provider_account_id,
+                        MonthlyChannelMetric.month == month,
+                    )
+                )
+                if metric is None:
+                    metric = MonthlyChannelMetric(
+                        channel=Channel.GOOGLE_BUSINESS.value,
+                        provider_account_id=connection.provider_account_id,
+                        month=month,
+                    )
+                    session.add(metric)
+                for field in GOOGLE_METRIC_FIELDS:
+                    setattr(metric, field, counts[field])
+                metric.imported_at = datetime.now(UTC)
+                session.commit()
+            succeeded += 1
+        except Exception as error:  # noqa: BLE001 - isolate a failed month from the remaining sync
+            logger.warning("Could not save Google Business metrics for %s (%s)", month, type(error).__name__)
+            failed += 1
+
+    logger.info(
+        "Google Business metrics sync finished for location %s: %s months updated, %s failed",
         connection.provider_account_id,
         succeeded,
         failed,
