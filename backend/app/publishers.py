@@ -18,10 +18,17 @@ class PermanentPublishError(PublisherError):
     """A content, permission, or configuration failure requiring intervention."""
 
 
+class AmbiguousPublishError(PublisherError):
+    """The provider may have accepted a request, so retrying could duplicate a post."""
+
+
 class ChannelPublisher(Protocol):
+    def is_available(self) -> bool:
+        """Return whether this adapter has an unambiguous connected destination."""
+
     def publish(self, *, caption: str, idempotency_key: str) -> str:
         """Publish content and return the provider's post ID."""
 
 
-# Channel adapters will register here in the OAuth integration stage.
+# Registered adapters are loaded by the publishing worker.
 PUBLISHERS: dict[Channel, ChannelPublisher] = {}
