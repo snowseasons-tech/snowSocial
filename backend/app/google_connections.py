@@ -14,9 +14,9 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from .connections import (
+    OAUTH_STATE_TTL,
     ChannelConnection,
     OAuthState,
-    OAUTH_STATE_TTL,
     _fernet,
     _required_setting,
 )
@@ -70,7 +70,8 @@ def _request_google_locations(access_token: str) -> list[dict[str, str]]:
 
 
 @router.get("/authorize", include_in_schema=False)
-def begin_google_oauth(session: Session = Depends(get_session)) -> RedirectResponse:
+def begin_google_oauth(session: Session = Depends(get_session),  # noqa: B008
+) -> RedirectResponse:
     client_id = _required_setting("GOOGLE_CLIENT_ID")
     redirect_uri = _required_setting("GOOGLE_REDIRECT_URI")
     _required_setting("GOOGLE_CLIENT_SECRET")
@@ -103,7 +104,7 @@ def complete_google_oauth(
     state: str = Query(min_length=20, max_length=256),
     code: str | None = Query(default=None, max_length=4096),
     error: str | None = Query(default=None, max_length=128),
-    session: Session = Depends(get_session),
+    session: Session = Depends(get_session),  # noqa: B008
 ) -> RedirectResponse:
     digest = hashlib.sha256(state.encode("utf-8")).hexdigest()
     oauth_state = session.scalar(select(OAuthState).where(OAuthState.state_hash == digest).with_for_update())
