@@ -11,7 +11,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from .database import SessionLocal, settings
-from .meta_publishers import FacebookPagePublisher
+from .meta_publishers import FacebookPagePublisher, InstagramPhotoPublisher
 from .models import Channel, ChannelDelivery, DeliveryStatus, Post, PostStatus
 from .publishers import (
     PUBLISHERS,
@@ -23,6 +23,7 @@ from .publishers import (
 logger = logging.getLogger("snowsocial.worker")
 TERMINAL_DELIVERY_STATUSES = {DeliveryStatus.PUBLISHED, DeliveryStatus.FAILED, DeliveryStatus.NEEDS_REVIEW}
 PUBLISHERS[Channel.FACEBOOK] = FacebookPagePublisher()
+PUBLISHERS[Channel.INSTAGRAM] = InstagramPhotoPublisher()
 
 
 @dataclass(frozen=True)
@@ -31,6 +32,7 @@ class DeliveryJob:
     post_id: UUID
     channel: Channel
     caption: str
+    media_url: str | None
     attempt_count: int
 
 
@@ -119,6 +121,7 @@ def claim_due_deliveries(session: Session, now: datetime) -> list[DeliveryJob]:
                 post_id=delivery.post_id,
                 channel=delivery.channel,
                 caption=delivery.post.caption,
+                media_url=delivery.post.media_url,
                 attempt_count=delivery.attempt_count,
             )
         )
@@ -188,7 +191,11 @@ def process_job(job: DeliveryJob) -> None:
     if publisher is None:
         return
     try:
-        platform_post_id = publisher.publish(caption=job.caption, idempotency_key=str(job.delivery_id))
+        platform_post_id = publisher.publish(
+            caption=job.caption,
+            idempotency_key=str(job.delivery_id),
+            media_url=job.media_url,
+        )
         if not platform_post_id:
             raise PermanentPublishError("The channel publisher returned no post ID")
     except PermanentPublishError as error:
