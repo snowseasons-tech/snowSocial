@@ -348,6 +348,9 @@
   document.querySelector('#connectGoogle').addEventListener('click', () => {
     window.location.assign(`${API_BASE}/api/connections/google/authorize`);
   });
+  document.querySelector('#connectLinkedIn').addEventListener('click', () => {
+    window.location.assign(`${API_BASE}/api/connections/linkedin/authorize`);
+  });
   caption.addEventListener('input', () => {
     document.querySelector('#charCount').textContent = String(caption.value.length);
   });
@@ -364,6 +367,8 @@
   if (connectionResult === 'meta') showToast('Meta channels connected.');
   if (connectionResult === 'google') showToast('Google Business Profile connected.');
   if (connectionResult === 'google_error') showToast('Google authorization was not completed.');
+  if (connectionResult === 'linkedin') showToast('LinkedIn organization connected.');
+  if (connectionResult === 'linkedin_error') showToast('LinkedIn authorization was not completed.');
   if (connectionResult) window.history.replaceState({}, document.title, window.location.pathname);
   void refreshWorkspace();
 })();
