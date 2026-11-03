@@ -8,8 +8,11 @@ from sqlalchemy import select
 
 from .connections import ChannelConnection, _fernet, decrypt_access_token
 from .database import SessionLocal
-from .models import Channel
-from .publishers import AmbiguousPublishError, PermanentPublishError, RetryablePublishError
+from .publishers import (
+    AmbiguousPublishError,
+    PermanentPublishError,
+    RetryablePublishError,
+)
 
 
 class GoogleBusinessPublisher:
