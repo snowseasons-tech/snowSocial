@@ -115,4 +115,31 @@ class MonthlyPostMetric(Base):
     shares: Mapped[int | None] = mapped_column(Integer, nullable=True)
     saves: Mapped[int | None] = mapped_column(Integer, nullable=True)
     link_clicks: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    calls: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    direction_requests: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    imported_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now)
+
+
+
+class MonthlyChannelMetric(Base):
+    """Profile-level monthly metrics not attributable to an individual post."""
+
+    __tablename__ = "monthly_channel_metrics"
+    __table_args__ = (
+        UniqueConstraint("channel", "provider_account_id", "month", name="uq_channel_metric_account_month"),
+    )
+
+    id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
+    channel: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    provider_account_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    month: Mapped[date] = mapped_column(Date, nullable=False, index=True)
+    impressions: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    reach: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    likes: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    comments: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    shares: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    saves: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    link_clicks: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    calls: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    direction_requests: Mapped[int | None] = mapped_column(Integer, nullable=True)
     imported_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now)
