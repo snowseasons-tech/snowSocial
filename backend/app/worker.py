@@ -10,6 +10,7 @@ from sqlalchemy import or_, select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
+from .analytics_sync import sync_recent_instagram_metrics
 from .database import SessionLocal, settings
 from .meta_publishers import FacebookPagePublisher, InstagramPhotoPublisher
 from .models import Channel, ChannelDelivery, DeliveryStatus, Post, PostStatus
@@ -212,6 +213,7 @@ def process_job(job: DeliveryJob) -> None:
 
 
 def run_forever() -> None:
+    next_analytics_sync_at = 0.0
     while True:
         try:
             with SessionLocal() as session:
@@ -223,6 +225,17 @@ def run_forever() -> None:
             logger.exception("Database error in publishing worker")
         except Exception:
             logger.exception("Unexpected publishing worker error")
+
+        if time.monotonic() >= next_analytics_sync_at:
+            try:
+                updated, failed = sync_recent_instagram_metrics(batch_size=settings.analytics_sync_batch_size)
+                if updated or failed:
+                    logger.info("Instagram analytics sync: %s updated, %s failed", updated, failed)
+            except SQLAlchemyError:
+                logger.exception("Database error during Instagram analytics sync")
+            except Exception:
+                logger.exception("Unexpected Instagram analytics sync error")
+            next_analytics_sync_at = time.monotonic() + settings.analytics_sync_interval_seconds
         time.sleep(settings.worker_poll_seconds)
 
 
