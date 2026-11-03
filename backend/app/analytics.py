@@ -104,7 +104,6 @@ def _aggregate_month(session: Session, month: date) -> tuple[MetricTotals, list[
     statement = (
         select(
             ChannelDelivery.channel,
-            func.count(func.distinct(MonthlyPostMetric.delivery_id)),
             *(func.sum(getattr(MonthlyPostMetric, field)) for field in METRIC_FIELDS),
         )
         .join(ChannelDelivery, ChannelDelivery.id == MonthlyPostMetric.delivery_id)
@@ -113,11 +112,28 @@ def _aggregate_month(session: Session, month: date) -> tuple[MetricTotals, list[
     )
     channel_values: dict[str, dict[str, int | None]] = {}
     for row in session.execute(statement).all():
-        channel, post_count, *values = row
+        channel, *values = row
         channel_values[channel.value] = {
-            "published_posts": post_count,
+            "published_posts": 0,
             **dict(zip(METRIC_FIELDS, values, strict=True)),
         }
+
+    next_month = date(month.year + 1, 1, 1) if month.month == 12 else date(month.year, month.month + 1, 1)
+    delivery_counts = session.execute(
+        select(ChannelDelivery.channel, func.count(ChannelDelivery.id))
+        .where(
+            ChannelDelivery.status == DeliveryStatus.PUBLISHED,
+            ChannelDelivery.published_at >= datetime.combine(month, datetime.min.time(), tzinfo=UTC),
+            ChannelDelivery.published_at < datetime.combine(next_month, datetime.min.time(), tzinfo=UTC),
+        )
+        .group_by(ChannelDelivery.channel)
+    ).all()
+    for channel, count in delivery_counts:
+        summary = channel_values.setdefault(
+            channel.value,
+            {"published_posts": 0, **{field: None for field in METRIC_FIELDS}},
+        )
+        summary["published_posts"] = count
 
     profile_statement = (
         select(
@@ -127,23 +143,12 @@ def _aggregate_month(session: Session, month: date) -> tuple[MetricTotals, list[
         .where(MonthlyChannelMetric.month == month)
         .group_by(MonthlyChannelMetric.channel)
     )
-    next_month = date(month.year + 1, 1, 1) if month.month == 12 else date(month.year, month.month + 1, 1)
     for row in session.execute(profile_statement).all():
         channel, *values = row
         summary = channel_values.setdefault(
             channel,
             {"published_posts": 0, **{field: None for field in METRIC_FIELDS}},
         )
-        if channel == Channel.GOOGLE_BUSINESS.value:
-            published_posts = session.scalar(
-                select(func.count(ChannelDelivery.id)).where(
-                    ChannelDelivery.channel == Channel.GOOGLE_BUSINESS,
-                    ChannelDelivery.status == DeliveryStatus.PUBLISHED,
-                    ChannelDelivery.published_at >= datetime.combine(month, datetime.min.time(), tzinfo=UTC),
-                    ChannelDelivery.published_at < datetime.combine(next_month, datetime.min.time(), tzinfo=UTC),
-                )
-            )
-            summary["published_posts"] = published_posts or 0
         for field, value in zip(METRIC_FIELDS, values, strict=True):
             if value is not None:
                 summary[field] = (summary[field] or 0) + value
