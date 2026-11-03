@@ -35,7 +35,7 @@
       <section class="welcome"><div><p class="eyebrow" id="todayLabel"></p><h1>Good afternoon, Eric <span>✳</span></h1><p class="muted">Here’s what’s happening with your social channels.</p></div><button class="primary-button" id="newPost"><span>＋</span> Create post</button></section>
 
       <section class="stats-grid" aria-label="This month's performance">
-        <article class="stat-card"><div class="stat-top"><span>Published this month</span><span class="stat-icon blue">↗</span></div><strong id="publishedMetric">—</strong><small><em class="neutral">From API</em></small><div class="mini-bars bars-blue"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></article>
+        <article class="stat-card"><div class="stat-top"><span>Published in report month</span><span class="stat-icon blue">↗</span></div><strong id="publishedMetric">—</strong><small><em class="neutral">From API</em></small><div class="mini-bars bars-blue"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></article>
         <article class="stat-card"><div class="stat-top"><span>People reached</span><span class="stat-icon purple">◉</span></div><strong id="reachMetric">—</strong><small><em class="neutral" id="reachChange">—</em> vs. last month</small><div class="mini-bars bars-purple"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></article>
         <article class="stat-card"><div class="stat-top"><span>Engagement rate</span><span class="stat-icon orange">♡</span></div><strong><span id="engagementMetric">—</span><span class="percent">%</span></strong><small><em class="neutral" id="engagementChange">—</em> from imported metrics</small><div class="mini-bars bars-orange"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></article>
         <article class="stat-card"><div class="stat-top"><span>Scheduled</span><span class="stat-icon green">◷</span></div><strong id="scheduledMetric">—</strong><small><span class="neutral" id="nextScheduled">No posts scheduled</span></small><div class="scheduled-progress"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div></article>
@@ -48,7 +48,22 @@
           <button class="add-slot" id="addToCalendar">＋ Add a post to this day</button>
         </article>
 
-        <article class="panel performance-panel" id="analytics"><div class="panel-heading"><div><h2>Performance</h2><p class="muted" id="analyticsEmpty">Monthly channel metrics</p></div><span class="select-button">This month</span></div><div class="chart-empty" id="chartEmpty">Loading monthly metrics…</div><div class="panel-footer"><span>Metrics summary</span><b>Monthly API totals</b><span class="reach-badge">Live data</span></div></article>
+        <article class="panel performance-panel" id="analytics">
+          <div class="panel-heading">
+            <div><h2>Performance</h2><p class="muted" id="analyticsEmpty">Monthly channel metrics</p></div>
+            <div class="month-picker"><label class="month-picker-label" for="analyticsMonth">Report month</label>
+              <select class="select-button" id="analyticsMonth" aria-label="Select report month"></select>
+            </div>
+          </div>
+          <div class="chart-empty" id="chartEmpty" aria-live="polite">Loading monthly metrics…</div>
+          <div class="table-wrap channel-metrics-wrap">
+            <table class="channel-metrics-table">
+              <thead><tr><th>CHANNEL</th><th>POSTS</th><th>IMPRESSIONS</th><th>REACH</th><th>CLICKS</th><th>LIKES</th><th>COMMENTS</th><th>SHARES</th><th>CALLS</th><th>DIRECTIONS</th></tr></thead>
+              <tbody id="channelMetricsBody"><tr><td colspan="10" class="empty-row">Loading channel metrics…</td></tr></tbody>
+            </table>
+          </div>
+          <div class="panel-footer"><span>Channel breakdown</span><b id="reportMonthLabel">Monthly totals</b><span class="reach-badge">Live data</span></div>
+        </article>
       </section>
 
       <section class="panel recent-panel" id="posts"><div class="panel-heading"><div><h2>Recent posts</h2><p class="muted">A quick look at your latest content</p></div><button class="text-button" id="viewAllPosts">View all posts <span>→</span></button></div><div class="table-wrap"><table><thead><tr><th>POST</th><th>CHANNELS</th><th>STATUS</th><th>DATE</th><th>REACH</th><th></th></tr></thead><tbody id="postsTable"></tbody></table></div></section>
