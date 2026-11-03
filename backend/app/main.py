@@ -3,6 +3,7 @@ from fastapi.responses import JSONResponse
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 
+from .analytics import router as analytics_router
 from .connections import router as connections_router
 from .database import SessionLocal
 from .routes import router as posts_router
@@ -10,6 +11,7 @@ from .routes import router as posts_router
 app = FastAPI(title="SnowSocial API", version="0.2.0")
 app.include_router(posts_router)
 app.include_router(connections_router)
+app.include_router(analytics_router)
 
 
 @app.get("/api/health")
