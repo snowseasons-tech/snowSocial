@@ -26,7 +26,7 @@ class PostCreate(BaseModel):
         return value
 
     @model_validator(mode="after")
-    def caption_must_fit_selected_channels(self) -> PostCreate:
+    def caption_must_fit_selected_channels(self) -> "PostCreate":
         validate_caption_for_channels(self.caption, self.channels)
         return self
 
