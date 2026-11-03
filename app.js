@@ -29,6 +29,7 @@
   function openComposer() {
     const now = new Date();
     const localDate = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+    dateInput.min = localDate;
     dateInput.value = localDate;
     dialog.showModal();
     caption.focus();
@@ -43,6 +44,10 @@
     }
     if (channels.length === 0) {
       showToast('Choose at least one channel.');
+      return;
+    }
+    if (status === 'Scheduled' && new Date(`${dateInput.value}T${timeInput.value}`) <= new Date()) {
+      showToast('Choose a future date and time for this post.');
       return;
     }
     const post = {
@@ -85,7 +90,8 @@
     channelsCell.textContent = post.channels.join(', ');
     const statusCell = document.createElement('td');
     const pill = document.createElement('span');
-    pill.className = `status-pill ${post.status === 'Draft' ? 'scheduled' : 'published'}`;
+    const statusClass = post.status === 'Published' ? 'published' : 'scheduled';
+    pill.className = `status-pill ${statusClass}`;
     pill.textContent = post.status;
     statusCell.append(pill);
     const dateCell = document.createElement('td');
