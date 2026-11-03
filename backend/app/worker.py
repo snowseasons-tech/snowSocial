@@ -10,7 +10,11 @@ from sqlalchemy import or_, select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
-from .analytics_sync import sync_recent_facebook_metrics, sync_recent_instagram_metrics
+from .analytics_sync import (
+    sync_google_business_metrics,
+    sync_recent_facebook_metrics,
+    sync_recent_instagram_metrics,
+)
 from .database import SessionLocal, settings
 from .google_publishers import GoogleBusinessPublisher
 from .meta_publishers import FacebookPagePublisher, InstagramPhotoPublisher
@@ -236,10 +240,11 @@ def run_forever() -> None:
                 facebook_updated, facebook_failed = sync_recent_facebook_metrics(
                     batch_size=settings.analytics_sync_batch_size
                 )
-                updated = instagram_updated + facebook_updated
-                failed = instagram_failed + facebook_failed
+                google_updated, google_failed = sync_google_business_metrics()
+                updated = instagram_updated + facebook_updated + google_updated
+                failed = instagram_failed + facebook_failed + google_failed
                 if updated or failed:
-                    logger.info("Meta analytics sync: %s updated, %s failed", updated, failed)
+                    logger.info("Analytics sync: %s monthly records updated, %s failed", updated, failed)
             except SQLAlchemyError:
                 logger.exception("Database error during Instagram analytics sync")
             except Exception:
