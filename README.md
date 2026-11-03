@@ -8,7 +8,8 @@ SnowSocial is a single-business social content planner for drafting posts, sched
 2. **Publishing worker** — claim due delivery records safely, persist outcomes, and retry temporary failures with backoff. *(Merged.)*
 3. **Channel connections** — connect Facebook Pages and linked Instagram business accounts with Meta OAuth, encrypted token storage, and channel-specific content validation. *(Merged.)*
 4. **Monthly analytics** — import normalized post metrics and return month-over-month summaries. *(Merged.)*
-5. **Frontend integration** — replace browser-only storage with the API and display real post and delivery statuses. *(This branch.)*
+5. **Frontend integration** — replace browser-only storage with the API and display real post and delivery statuses. *(Merged.)*
+6. **Meta publishing** — publish scheduled text posts to the connected Facebook Page and route uncertain results to review instead of blindly retrying. *(This branch.)*
 
 ## Run the dashboard prototype
 
@@ -21,7 +22,7 @@ Serve the dashboard at `http://localhost:8080` (for example, `python3 -m http.se
 3. Open `http://127.0.0.1:8000/docs` to inspect the API.
 4. Check `http://127.0.0.1:8000/api/health` for the database health response.
 
-The optional worker service can be started with `docker compose --profile publishing up worker`. It will leave queued deliveries untouched until at least one channel publisher is registered in `backend/app/publishers.py`.
+The optional worker service can be started with `docker compose --profile publishing up --build worker`. The Facebook Page text adapter publishes through the Page feed endpoint. If more than one Page is connected, set `META_FACEBOOK_PAGE_ID` to the intended Page ID (visible as `provider_account_id` in `/api/connections`). The worker needs the same `TOKEN_ENCRYPTION_KEY` as the API. Instagram, Google Business Profile, and LinkedIn deliveries remain queued until their publisher adapters are added. Instagram publishing also needs media URLs, which the post composer does not store yet. If Meta may have accepted a request but did not confirm it, SnowSocial marks the delivery `needs_review` to avoid an automatic duplicate.
 
 To enable Meta account linking, set `META_APP_ID`, `META_APP_SECRET`, `META_REDIRECT_URI`, `META_FRONTEND_URL`, and `TOKEN_ENCRYPTION_KEY` in the API environment. Configure the exact redirect URI in the Meta developer app. Generate a Fernet key with `python -c 'from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())'`. Start account linking at `/api/connections/meta/authorize`, list connected accounts at `/api/connections`, and disconnect one with `DELETE /api/connections/{connection_id}`. The API stores tokens encrypted at rest; keep the API private until authentication is added.
 
@@ -31,4 +32,4 @@ The dashboard now loads posts, account connections, and monthly totals from the 
 
 Pull requests and pushes to `main` run GitHub Actions checks for frontend syntax, backend lint and syntax, database migrations, Compose configuration, and the API image build.
 
-The API supports draft creation and editing, approval, future scheduling, cancellation, per-channel delivery records, connected Meta accounts, and monthly metric summaries. The dashboard now reads posts, connection state, and summary totals from the API. The worker does not publish to social platforms until channel publishing adapters are registered, and the API still has no general user authentication. Keep it private until authentication is added.
+The API supports draft creation and editing, approval, future scheduling, cancellation, per-channel delivery records, connected Meta accounts, and monthly metric summaries. The dashboard reads posts, connection state, and summary totals from the API. The worker publishes text posts to Facebook Pages; Instagram, Google Business Profile, and LinkedIn still need adapters. The API has no general user authentication, so keep it private.
