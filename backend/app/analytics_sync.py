@@ -11,6 +11,7 @@ from sqlalchemy import select
 from .connections import ChannelConnection, decrypt_access_token
 from .database import SessionLocal
 from .google_auth import get_google_access_token
+from .x_publishers import XUserPublisher
 from .models import (
     Channel,
     ChannelDelivery,
@@ -669,4 +670,110 @@ def sync_linkedin_metrics() -> tuple[int, int]:
         succeeded,
         failed,
     )
+    return succeeded, failed
+
+
+X_METRIC_FIELDS = ("impressions", "likes", "comments", "shares", "link_clicks")
+
+
+def sync_x_post_metrics(*, batch_size: int) -> tuple[int, int]:
+    """Refresh lifetime metrics for recently published X posts."""
+    now = datetime.now(UTC)
+    cutoff = now - timedelta(days=METRIC_LOOKBACK_DAYS)
+    try:
+        with SessionLocal() as session:
+            connection = XUserPublisher._connection(session)
+            access_token = XUserPublisher._get_access_token(connection, session)
+            deliveries = list(session.scalars(
+                select(ChannelDelivery)
+                .where(
+                    ChannelDelivery.channel == Channel.X,
+                    ChannelDelivery.status == DeliveryStatus.PUBLISHED,
+                    ChannelDelivery.platform_post_id.is_not(None),
+                    ChannelDelivery.published_at.is_not(None),
+                    ChannelDelivery.published_at >= cutoff,
+                )
+                .order_by(ChannelDelivery.published_at.desc())
+                .limit(batch_size)
+            ).all())
+            posts = [(d.id, d.platform_post_id, d.published_at) for d in deliveries]
+    except Exception as error:  # noqa: BLE001 - OAuth/token failures must not stop the worker
+        logger.warning("Could not prepare X analytics sync (%s)", type(error).__name__)
+        return 0, 1
+
+    if not posts:
+        return 0, 0
+
+    succeeded = failed = 0
+    for offset in range(0, len(posts), 100):
+        batch = posts[offset : offset + 100]
+        ids = [post_id for _, post_id, _ in batch if post_id]
+        try:
+            response = httpx.get(
+                "https://api.x.com/2/tweets",
+                headers={"Authorization": f"Bearer {access_token}"},
+                params={
+                    "ids": ",".join(ids),
+                    "tweet.fields": "public_metrics,organic_metrics,non_public_metrics",
+                },
+                timeout=httpx.Timeout(30.0, connect=5.0),
+            )
+            response.raise_for_status()
+            payload = response.json()
+            if not isinstance(payload, dict) or not isinstance(payload.get("data", []), list):
+                raise ValueError("X returned an unexpected tweet metrics response")
+        except (httpx.HTTPError, ValueError, TypeError) as error:
+            logger.warning("Could not fetch X post metrics (%s)", type(error).__name__)
+            failed += len(batch)
+            continue
+
+        metrics_by_id = {
+            str(item.get("id")): item
+            for item in payload.get("data", [])
+            if isinstance(item, dict) and item.get("id") is not None
+        }
+        for delivery_id, post_id, published_at in batch:
+            item = metrics_by_id.get(str(post_id))
+            if item is None:
+                failed += 1
+                continue
+            public = item.get("public_metrics")
+            public = public if isinstance(public, dict) else {}
+            account_metrics = item.get("non_public_metrics")
+            if not isinstance(account_metrics, dict):
+                account_metrics = item.get("organic_metrics")
+            account_metrics = account_metrics if isinstance(account_metrics, dict) else {}
+            retweets = _count(public.get("retweet_count"))
+            quotes = _count(public.get("quote_count"))
+            counts = {
+                "impressions": _count(account_metrics.get("impression_count")),
+                "likes": _count(public.get("like_count")),
+                "comments": _count(public.get("reply_count")),
+                "shares": (retweets or 0) + (quotes or 0),
+                "link_clicks": _count(account_metrics.get("url_link_clicks")),
+            }
+            published = published_at
+            if published.tzinfo is None:
+                published = published.replace(tzinfo=UTC)
+            month = published.date().replace(day=1)
+            try:
+                with SessionLocal() as session:
+                    metric = session.scalar(select(MonthlyPostMetric).where(
+                        MonthlyPostMetric.delivery_id == delivery_id,
+                        MonthlyPostMetric.month == month,
+                    ))
+                    if metric is None:
+                        metric = MonthlyPostMetric(delivery_id=delivery_id, month=month)
+                        session.add(metric)
+                    for field in X_METRIC_FIELDS:
+                        if counts[field] is not None:
+                            setattr(metric, field, counts[field])
+                    metric.imported_at = now
+                    session.commit()
+                succeeded += 1
+            except Exception as error:  # noqa: BLE001 - isolate a failed delivery
+                logger.warning("Could not save X post metrics for delivery %s (%s)", delivery_id, type(error).__name__)
+                failed += 1
+
+    logger.info("X post analytics sync finished: %s updated, %s failed", succeeded, failed)
     return succeeded, failed
