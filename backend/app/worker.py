@@ -23,6 +23,7 @@ from .publishers import (
 logger = logging.getLogger("snowsocial.worker")
 TERMINAL_DELIVERY_STATUSES = {DeliveryStatus.PUBLISHED, DeliveryStatus.FAILED, DeliveryStatus.NEEDS_REVIEW}
 PUBLISHERS[Channel.FACEBOOK] = FacebookPagePublisher()
+PUBLISHERS[Channel.INSTAGRAM] = InstagramPhotoPublisher()
 
 
 @dataclass(frozen=True)
