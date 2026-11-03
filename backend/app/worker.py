@@ -11,11 +11,13 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from .database import SessionLocal, settings
+from .meta_publishers import FacebookPagePublisher
 from .models import Channel, ChannelDelivery, DeliveryStatus, Post, PostStatus
-from .publishers import PUBLISHERS, PermanentPublishError, RetryablePublishError
+from .publishers import AmbiguousPublishError, PUBLISHERS, PermanentPublishError, RetryablePublishError
 
 logger = logging.getLogger("snowsocial.worker")
 TERMINAL_DELIVERY_STATUSES = {DeliveryStatus.PUBLISHED, DeliveryStatus.FAILED, DeliveryStatus.NEEDS_REVIEW}
+PUBLISHERS[Channel.FACEBOOK] = FacebookPagePublisher()
 
 
 @dataclass(frozen=True)
@@ -78,7 +80,7 @@ def move_expired_claims_to_review(session: Session, now: datetime) -> int:
 
 
 def claim_due_deliveries(session: Session, now: datetime) -> list[DeliveryJob]:
-    configured_channels = list(PUBLISHERS)
+    configured_channels = [channel for channel, publisher in PUBLISHERS.items() if publisher.is_available()]
     if not configured_channels:
         return []
     statement = (
@@ -160,6 +162,22 @@ def fail_delivery(job: DeliveryJob, message: str, retryable: bool) -> None:
         session.commit()
 
 
+def mark_delivery_needs_review(job: DeliveryJob, message: str) -> None:
+    with SessionLocal() as session:
+        delivery = session.scalar(
+            select(ChannelDelivery).where(ChannelDelivery.id == job.delivery_id).with_for_update()
+        )
+        if delivery is None or delivery.status is not DeliveryStatus.PUBLISHING:
+            logger.warning("Delivery %s changed state before review status was recorded", job.delivery_id)
+            return
+        delivery.status = DeliveryStatus.NEEDS_REVIEW
+        delivery.error_message = message[:1000]
+        delivery.claimed_at = None
+        delivery.next_attempt_at = None
+        reconcile_post_status(session, job.post_id)
+        session.commit()
+
+
 def process_job(job: DeliveryJob) -> None:
     publisher = PUBLISHERS.get(job.channel)
     if publisher is None:
@@ -170,6 +188,8 @@ def process_job(job: DeliveryJob) -> None:
             raise PermanentPublishError("The channel publisher returned no post ID")
     except PermanentPublishError as error:
         fail_delivery(job, str(error), retryable=False)
+    except AmbiguousPublishError as error:
+        mark_delivery_needs_review(job, str(error))
     except RetryablePublishError as error:
         fail_delivery(job, str(error), retryable=True)
     except Exception as error:  # noqa: BLE001 - provider SDKs raise varied transient exceptions
@@ -180,8 +200,6 @@ def process_job(job: DeliveryJob) -> None:
 
 
 def run_forever() -> None:
-    if not PUBLISHERS:
-        logger.warning("No channel adapters are registered; queued deliveries will remain untouched")
     while True:
         try:
             with SessionLocal() as session:
