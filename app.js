@@ -16,7 +16,8 @@
     facebook: 'Facebook',
     instagram: 'Instagram',
     google_business: 'Google Business',
-    linkedin: 'LinkedIn'
+    linkedin: 'LinkedIn',
+    x: 'X'
   };
   const CHANNEL_VALUES = Object.fromEntries(
     Object.entries(CHANNEL_LABELS).map(([value, label]) => [label, value])
@@ -241,6 +242,8 @@
       const dot = row.querySelector('.connected-dot');
       dot.classList.toggle('is-disconnected', !connected);
       dot.title = connected ? 'Connected' : 'Not connected';
+      const connectButton = row.querySelector('.connect-small');
+      if (connectButton) connectButton.hidden = connected;
       row.setAttribute('aria-label', `${channelLabel(row.dataset.channel)}: ${connected ? 'connected' : 'not connected'}`);
     });
     const count = connectedChannels.size;
@@ -428,6 +431,9 @@
   document.querySelector('#connectLinkedIn').addEventListener('click', () => {
     window.location.assign(`${API_BASE}/api/connections/linkedin/authorize`);
   });
+  document.querySelector('#connectX').addEventListener('click', () => {
+    window.location.assign(`${API_BASE}/api/connections/x/authorize`);
+  });
   caption.addEventListener('input', () => {
     document.querySelector('#charCount').textContent = String(caption.value.length);
   });
@@ -446,6 +452,8 @@
   if (connectionResult === 'google_error') showToast('Google authorization was not completed.');
   if (connectionResult === 'linkedin') showToast('LinkedIn organization connected.');
   if (connectionResult === 'linkedin_error') showToast('LinkedIn authorization was not completed.');
+  if (connectionResult === 'x') showToast('X account connected.');
+  if (connectionResult === 'x_error') showToast('X authorization was not completed.');
   if (connectionResult) window.history.replaceState({}, document.title, window.location.pathname);
   populateReportMonths();
   void initializeAuth().then((authenticated) => { if (authenticated) return refreshWorkspace(); });
