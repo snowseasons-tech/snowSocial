@@ -36,6 +36,7 @@
   };
   let posts = [];
   let monthlySummary = null;
+  let monthlyPosts = [];
   let toastTimer;
   let showLoginScreen = null;
 
@@ -319,7 +320,8 @@
   }
 
   function csvCell(value) {
-    const text = value === null || value === undefined ? '' : String(value);
+    let text = value === null || value === undefined ? '' : String(value);
+    if (typeof value === 'string' && /^[\t\r\n ]*[=+@-]/u.test(text)) text = `'${text}`;
     return `"${text.replaceAll('"', '""')}"`;
   }
 
@@ -343,10 +345,12 @@
     const rows = [[
       'Month',
       'Channel',
+      'Post',
+      'Published At',
       ...fields.map(([, label]) => label)
     ]];
     const addMetricsRow = (month, channel, metrics) => {
-      rows.push([month, channel, ...fields.map(([field]) => metrics[field])]);
+      rows.push([month, channel, '', '', ...fields.map(([field]) => metrics[field])]);
     };
     for (const channel of monthlySummary.by_channel) {
       addMetricsRow(monthlySummary.month, channelLabel(channel.channel), channel.metrics);
@@ -357,8 +361,19 @@
       monthlySummary.month,
       'Change (%)',
       '',
+      '',
+      '',
       ...fields.slice(1).map(([field]) => monthlySummary.change_percent[field])
     ]);
+    for (const post of monthlyPosts) {
+      rows.push([
+        monthlySummary.month,
+        channelLabel(post.channel),
+        post.caption,
+        post.published_at,
+        ...fields.map(([field]) => post.metrics[field])
+      ]);
+    }
     const csv = `\uFEFF${rows.map((row) => row.map(csvCell).join(',')).join('\r\n')}`;
     const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
     const link = document.createElement('a');
@@ -367,20 +382,53 @@
     document.body.append(link);
     link.click();
     link.remove();
-    URL.revokeObjectURL(url);
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  function updateMonthlyPostPerformance(items) {
+    const body = document.querySelector('#monthlyPostsBody');
+    body.replaceChildren();
+    if (!items.length) {
+      const row = document.createElement('tr');
+      appendCell(row, 'No posts were published in this month.', 'empty-row').colSpan = 9;
+      body.append(row);
+      return;
+    }
+    items.forEach((item) => {
+      const row = document.createElement('tr');
+      appendCell(row, channelLabel(item.channel), 'channel-name');
+      const captionCell = appendCell(row, item.caption, 'post-caption-cell');
+      captionCell.title = item.caption;
+      appendCell(row, new Date(item.published_at).toLocaleDateString(undefined, {
+        month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC'
+      }));
+      appendCell(row, formatNumber(item.metrics.impressions));
+      appendCell(row, formatNumber(item.metrics.reach));
+      appendCell(row, formatNumber(item.metrics.link_clicks));
+      appendCell(row, formatNumber(item.metrics.likes));
+      appendCell(row, formatNumber(item.metrics.comments));
+      appendCell(row, formatNumber(item.metrics.shares));
+      body.append(row);
+    });
   }
 
   async function loadMonthlyAnalytics(month) {
     const chart = document.querySelector('#chartEmpty');
     chart.textContent = 'Loading monthly metrics…';
     try {
-      const summary = await apiRequest(`/api/analytics/monthly?month=${encodeURIComponent(month)}`);
+      const [summary, postMetrics] = await Promise.all([
+        apiRequest(`/api/analytics/monthly?month=${encodeURIComponent(month)}`),
+        apiRequest(`/api/analytics/monthly/posts?month=${encodeURIComponent(month)}&limit=500`)
+      ]);
       monthlySummary = summary;
+      monthlyPosts = postMetrics;
       document.querySelector('#exportMonthlyCsv').disabled = false;
       updateAnalytics(summary);
+      updateMonthlyPostPerformance(postMetrics);
     } catch (error) {
       console.warn('Monthly analytics are not available:', error);
       monthlySummary = null;
+      monthlyPosts = [];
       document.querySelector('#exportMonthlyCsv').disabled = true;
       chart.textContent = 'Monthly metrics are not available for this period.';
       document.querySelector('#channelMetricsBody').replaceChildren();
@@ -388,6 +436,11 @@
       const cell = appendCell(row, 'Check the API connection and try again.', 'empty-row');
       cell.colSpan = 10;
       document.querySelector('#channelMetricsBody').append(row);
+      const postsBody = document.querySelector('#monthlyPostsBody');
+      postsBody.replaceChildren();
+      const postsRow = document.createElement('tr');
+      appendCell(postsRow, 'Post metrics are not available for this month.', 'empty-row').colSpan = 9;
+      postsBody.append(postsRow);
     }
   }
 
