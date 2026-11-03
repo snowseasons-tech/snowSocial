@@ -49,7 +49,7 @@ def begin_linkedin_oauth(session: Session = Depends(get_session),  # noqa: B008
         "client_id": client_id,
         "redirect_uri": redirect_uri,
         "state": state,
-        "scope": "w_organization_social",
+        "scope": "w_organization_social rw_organization_admin",
     }
     return RedirectResponse(
         f"https://www.linkedin.com/oauth/v2/authorization?{urlencode(params)}",
