@@ -8,7 +8,13 @@ from sqlalchemy.orm import Session, selectinload
 
 from .database import get_session
 from .models import Channel, ChannelDelivery, DeliveryStatus, Post, PostStatus, utc_now
-from .schemas import PostCreate, PostRead, PostUpdate, ScheduleRequest, validate_caption_for_channels
+from .schemas import (
+    PostCreate,
+    PostRead,
+    PostUpdate,
+    ScheduleRequest,
+    validate_caption_for_channels,
+)
 
 router = APIRouter(prefix="/api/posts", tags=["posts"])
 
