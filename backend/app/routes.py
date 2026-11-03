@@ -107,6 +107,8 @@ def schedule_post(post_id: UUID, payload: ScheduleRequest, session: Session = De
     scheduled_at = payload.scheduled_at
     if scheduled_at.tzinfo is None:
         raise HTTPException(status_code=422, detail="scheduled_at must include a timezone offset")
+    if Channel.INSTAGRAM.value in post.channels and not post.media_url:
+        raise HTTPException(status_code=422, detail="Instagram posts require a public image URL")
     if scheduled_at <= datetime.now(UTC):
         raise HTTPException(status_code=422, detail="scheduled_at must be in the future")
     try:
