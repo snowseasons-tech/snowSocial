@@ -11,7 +11,7 @@ from .models import Channel, DeliveryStatus, PostStatus
 class PostCreate(BaseModel):
     caption: str = Field(min_length=1, max_length=5000)
     media_url: str | None = Field(default=None, max_length=2048)
-    channels: list[Channel] = Field(min_length=1, max_length=4)
+    channels: list[Channel] = Field(min_length=1, max_length=5)
 
     @field_validator("caption")
     @classmethod
@@ -36,13 +36,15 @@ class PostCreate(BaseModel):
     @model_validator(mode="after")
     def caption_must_fit_selected_channels(self) -> "PostCreate":
         validate_caption_for_channels(self.caption, self.channels)
+        if Channel.X in self.channels and self.media_url:
+            raise ValueError("X publishing is text-only in this release; remove the image URL or deselect X")
         return self
 
 
 class PostUpdate(BaseModel):
     caption: str | None = Field(default=None, min_length=1, max_length=5000)
     media_url: str | None = Field(default=None, max_length=2048)
-    channels: list[Channel] | None = Field(default=None, min_length=1, max_length=4)
+    channels: list[Channel] | None = Field(default=None, min_length=1, max_length=5)
 
     @field_validator("media_url")
     @classmethod
