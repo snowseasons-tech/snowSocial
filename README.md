@@ -6,8 +6,8 @@ SnowSocial is a single-business social content planner for drafting posts, sched
 
 1. **Post lifecycle API** — save drafts, approve them, schedule future posts, and create one delivery record per selected channel. *(This branch.)*
 2. **Publishing worker** — claim due delivery records safely, persist outcomes, and retry temporary failures with backoff. *(This branch.)*
-3. **Channel connections** — connect Facebook Pages and linked Instagram business accounts with Meta OAuth, encrypted token storage, and channel-specific content validation. *(This branch.)*
-4. **Monthly analytics** — import available platform metrics and generate a month-over-month summary.
+3. **Channel connections** — connect Facebook Pages and linked Instagram business accounts with Meta OAuth, encrypted token storage, and channel-specific content validation. *(Merged.)*
+4. **Monthly analytics** — import normalized post metrics and return month-over-month summaries. *(This branch.)*
 5. **Frontend integration** — replace browser-only storage with the API and display real post and delivery statuses.
 
 ## Run the dashboard prototype
@@ -24,6 +24,8 @@ Open `index.html` in a current browser. Posts created in the composer are saved 
 The optional worker service can be started with `docker compose --profile publishing up worker`. It will leave queued deliveries untouched until at least one channel publisher is registered in `backend/app/publishers.py`.
 
 To enable Meta account linking, set `META_APP_ID`, `META_APP_SECRET`, `META_REDIRECT_URI`, and `TOKEN_ENCRYPTION_KEY` in the API environment. Configure the exact redirect URI in the Meta developer app. Generate a Fernet key with `python -c 'from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())'`. Start account linking at `/api/connections/meta/authorize`, list connected accounts at `/api/connections`, and disconnect one with `DELETE /api/connections/{connection_id}`. The API stores tokens encrypted at rest; keep the API private until authentication is added.
+
+Monthly platform metrics can be imported with `POST /api/analytics/metrics` using the `X-Analytics-Ingest-Token` header and a payload containing published delivery IDs, the first day of each reporting month, and available counters (`impressions`, `reach`, `likes`, `comments`, `shares`, `saves`, and `link_clicks`). Set `ANALYTICS_INGEST_TOKEN` to a random secret of at least 32 characters. Re-importing the same delivery and month replaces that snapshot. Read the aggregate and previous-month comparison with `GET /api/analytics/monthly?month=YYYY-MM-01`. A missing metric remains `null`; percentage change is `null` when either month has no comparable value or the previous value is zero. Provider-specific metric collection is the next integration task.
 
 Pull requests and pushes to `main` run GitHub Actions checks for frontend syntax, backend lint and syntax, database migrations, Compose configuration, and the API image build.
 
