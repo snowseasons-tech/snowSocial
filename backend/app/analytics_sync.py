@@ -505,3 +505,168 @@ def sync_google_business_metrics() -> tuple[int, int]:
         failed,
     )
     return succeeded, failed
+
+
+
+LINKEDIN_METRIC_FIELDS = ("impressions", "reach", "likes", "comments", "shares", "link_clicks")
+LINKEDIN_STATISTIC_FIELDS = {
+    "impressionCount": "impressions",
+    "uniqueImpressionsCount": "reach",
+    "likeCount": "likes",
+    "commentCount": "comments",
+    "shareCount": "shares",
+    "clickCount": "link_clicks",
+}
+
+
+def _linkedin_connection() -> ChannelConnection | None:
+    organization_id = os.getenv("LINKEDIN_ORGANIZATION_ID", "").strip()
+    if not organization_id.isdigit():
+        return None
+    organization_urn = f"urn:li:organization:{organization_id}"
+    with SessionLocal() as session:
+        connections = list(session.scalars(
+            select(ChannelConnection).where(
+                ChannelConnection.provider == "linkedin",
+                ChannelConnection.channel == Channel.LINKEDIN.value,
+                ChannelConnection.provider_account_id == organization_urn,
+            )
+        ).all())
+        if len(connections) != 1:
+            return None
+        return connections[0]
+
+
+def _linkedin_count(value: object) -> int | None:
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, str):
+        try:
+            value = int(value)
+        except ValueError:
+            return None
+    if not isinstance(value, (int, float)):
+        return None
+    return max(0, int(value))
+
+
+def sync_linkedin_metrics() -> tuple[int, int]:
+    """Refresh the company's monthly organic share statistics for the rolling 12 months."""
+    connection = _linkedin_connection()
+    if connection is None:
+        return 0, 0
+
+    now = datetime.now(UTC)
+    current_month = now.date().replace(day=1)
+    month_index = current_month.year * 12 + current_month.month - 1 - 11
+    start_month = date(month_index // 12, month_index % 12 + 1, 1)
+    start_at = datetime(start_month.year, start_month.month, start_month.day, tzinfo=UTC)
+    start_ms = int(start_at.timestamp() * 1000)
+    end_ms = int(now.timestamp() * 1000)
+    version = os.getenv("LINKEDIN_API_VERSION", "202610").strip()
+    if len(version) != 6 or not version.isdigit():
+        logger.error("LINKEDIN_API_VERSION must use YYYYMM format")
+        return 0, 1
+
+    try:
+        with SessionLocal() as session:
+            managed_connection = session.get(ChannelConnection, connection.id)
+            if managed_connection is None:
+                return 0, 0
+            expires_at = managed_connection.token_expires_at
+            if expires_at is not None:
+                if expires_at.tzinfo is None:
+                    expires_at = expires_at.replace(tzinfo=UTC)
+                if expires_at <= now:
+                    logger.warning("LinkedIn access token expired; reconnect the organization to resume analytics")
+                    return 0, 1
+            access_token = decrypt_access_token(managed_connection)
+        response = httpx.get(
+            "https://api.linkedin.com/rest/organizationalEntityShareStatistics",
+            headers={
+                "Authorization": f"Bearer {access_token}",
+                "LinkedIn-Version": version,
+                "X-Restli-Protocol-Version": "2.0.0",
+            },
+            params={
+                "q": "organizationalEntity",
+                "organizationalEntity": connection.provider_account_id,
+                "timeIntervals.timeGranularityType": "MONTH",
+                "timeIntervals.timeRange.start": start_ms,
+                "timeIntervals.timeRange.end": end_ms,
+            },
+            timeout=httpx.Timeout(30.0, connect=5.0),
+        )
+        response.raise_for_status()
+        payload = response.json()
+        if not isinstance(payload, dict) or not isinstance(payload.get("elements", []), list):
+            raise ValueError("LinkedIn returned an unexpected share statistics response")
+    except (httpx.HTTPError, ValueError, TypeError) as error:
+        logger.warning(
+            "Could not fetch LinkedIn organization metrics for %s (%s)",
+            connection.provider_account_id,
+            type(error).__name__,
+        )
+        return 0, 1
+
+    month_totals: dict[date, dict[str, int]] = {}
+    for element in payload.get("elements", []):
+        if not isinstance(element, dict):
+            continue
+        time_range = element.get("timeRange")
+        stats = element.get("totalShareStatistics")
+        if not isinstance(time_range, dict) or not isinstance(stats, dict):
+            continue
+        try:
+            period_start = datetime.fromtimestamp(int(time_range["start"]) / 1000, tz=UTC).date()
+        except (KeyError, TypeError, ValueError, OverflowError, OSError):
+            continue
+        month = period_start.replace(day=1)
+        values = month_totals.setdefault(month, {field: 0 for field in LINKEDIN_METRIC_FIELDS})
+        for source, target in LINKEDIN_STATISTIC_FIELDS.items():
+            value = _linkedin_count(stats.get(source))
+            if value is not None:
+                values[target] = value
+
+    # LinkedIn may omit months with no organic activity; write zero-valued rows for report continuity.
+    month_cursor = start_month
+    while month_cursor <= current_month:
+        month_totals.setdefault(month_cursor, {field: 0 for field in LINKEDIN_METRIC_FIELDS})
+        month_index = month_cursor.year * 12 + month_cursor.month
+        month_cursor = date(month_index // 12, month_index % 12 + 1, 1)
+
+    succeeded = 0
+    failed = 0
+    for month, values in month_totals.items():
+        try:
+            with SessionLocal() as session:
+                metric = session.scalar(
+                    select(MonthlyChannelMetric).where(
+                        MonthlyChannelMetric.channel == Channel.LINKEDIN.value,
+                        MonthlyChannelMetric.provider_account_id == connection.provider_account_id,
+                        MonthlyChannelMetric.month == month,
+                    )
+                )
+                if metric is None:
+                    metric = MonthlyChannelMetric(
+                        channel=Channel.LINKEDIN.value,
+                        provider_account_id=connection.provider_account_id,
+                        month=month,
+                    )
+                    session.add(metric)
+                for field in LINKEDIN_METRIC_FIELDS:
+                    setattr(metric, field, values[field])
+                metric.imported_at = now
+                session.commit()
+            succeeded += 1
+        except Exception as error:  # noqa: BLE001 - isolate a failed month from the remaining sync
+            logger.warning("Could not save LinkedIn metrics for %s (%s)", month, type(error).__name__)
+            failed += 1
+
+    logger.info(
+        "LinkedIn analytics sync finished for organization %s: %s months updated, %s failed",
+        connection.provider_account_id,
+        succeeded,
+        failed,
+    )
+    return succeeded, failed
