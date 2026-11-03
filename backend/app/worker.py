@@ -15,6 +15,7 @@ from .analytics_sync import (
     sync_linkedin_metrics,
     sync_recent_facebook_metrics,
     sync_recent_instagram_metrics,
+    sync_x_post_metrics,
 )
 from .database import SessionLocal, settings
 from .google_publishers import GoogleBusinessPublisher
@@ -225,6 +226,7 @@ def process_job(job: DeliveryJob) -> None:
 
 def run_forever() -> None:
     next_analytics_sync_at = 0.0
+    next_x_analytics_sync_at = 0.0
     while True:
         try:
             with SessionLocal() as session:
@@ -256,6 +258,17 @@ def run_forever() -> None:
             except Exception:
                 logger.exception("Unexpected Instagram analytics sync error")
             next_analytics_sync_at = time.monotonic() + settings.analytics_sync_interval_seconds
+
+        if settings.x_analytics_enabled and time.monotonic() >= next_x_analytics_sync_at:
+            try:
+                x_updated, x_failed = sync_x_post_metrics(batch_size=settings.analytics_sync_batch_size)
+                if x_updated or x_failed:
+                    logger.info("X analytics sync: %s monthly records updated, %s failed", x_updated, x_failed)
+            except SQLAlchemyError:
+                logger.exception("Database error during X analytics sync")
+            except Exception:
+                logger.exception("Unexpected X analytics sync error")
+            next_x_analytics_sync_at = time.monotonic() + settings.x_analytics_sync_interval_seconds
         time.sleep(settings.worker_poll_seconds)
 
 
