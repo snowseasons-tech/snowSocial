@@ -8,7 +8,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
 from pydantic import BaseModel, Field, field_validator, model_validator
-from sqlalchemy import func, select
+from sqlalchemy import and_, func, select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
@@ -19,6 +19,7 @@ from .models import (
     DeliveryStatus,
     MonthlyChannelMetric,
     MonthlyPostMetric,
+    Post,
 )
 
 router = APIRouter(prefix="/api/analytics", tags=["analytics"])
@@ -82,6 +83,14 @@ class MonthlySummary(BaseModel):
     previous_month: date
     previous_totals: MetricTotals
     change_percent: dict[str, float | None]
+
+
+class MonthlyPostSummary(BaseModel):
+    delivery_id: UUID
+    channel: str
+    caption: str
+    published_at: datetime
+    metrics: MetricTotals
 
 
 def require_ingest_token(
@@ -169,6 +178,58 @@ def _aggregate_month(session: Session, month: date) -> tuple[MetricTotals, list[
         },
     )
     return totals, channel_totals
+
+
+@router.get("/monthly/posts", response_model=list[MonthlyPostSummary])
+def monthly_post_performance(
+    month: date = Query(description="First day of the reporting month, for example 2026-11-01"),
+    limit: int = Query(default=100, ge=1, le=500),
+    session: Session = Depends(get_session),
+    _: str = Depends(require_authenticated_user),
+) -> list[MonthlyPostSummary]:
+    if month.day != 1:
+        raise HTTPException(status_code=422, detail="month must be the first day of the reporting month")
+    next_month = date(month.year + 1, 1, 1) if month.month == 12 else date(month.year, month.month + 1, 1)
+    statement = (
+        select(ChannelDelivery, Post, MonthlyPostMetric)
+        .join(Post, Post.id == ChannelDelivery.post_id)
+        .outerjoin(
+            MonthlyPostMetric,
+            and_(
+                MonthlyPostMetric.delivery_id == ChannelDelivery.id,
+                MonthlyPostMetric.month == month,
+            ),
+        )
+        .where(
+            ChannelDelivery.status == DeliveryStatus.PUBLISHED,
+            ChannelDelivery.published_at >= datetime.combine(month, datetime.min.time(), tzinfo=UTC),
+            ChannelDelivery.published_at < datetime.combine(next_month, datetime.min.time(), tzinfo=UTC),
+        )
+        .order_by(
+            MonthlyPostMetric.impressions.desc().nullslast(),
+            MonthlyPostMetric.reach.desc().nullslast(),
+            ChannelDelivery.published_at.desc(),
+        )
+        .limit(limit)
+    )
+    try:
+        rows = session.execute(statement).all()
+    except SQLAlchemyError as error:
+        raise HTTPException(status_code=503, detail="Could not load monthly post performance") from error
+
+    results: list[MonthlyPostSummary] = []
+    for delivery, post, metric in rows:
+        values = {field: getattr(metric, field) if metric is not None else None for field in METRIC_FIELDS}
+        results.append(
+            MonthlyPostSummary(
+                delivery_id=delivery.id,
+                channel=delivery.channel.value,
+                caption=post.caption,
+                published_at=delivery.published_at,
+                metrics=MetricTotals(published_posts=1, **values),
+            )
+        )
+    return results
 
 
 @router.post("/metrics", status_code=status.HTTP_202_ACCEPTED)
