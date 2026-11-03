@@ -6,8 +6,8 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from .analytics import router as analytics_router
 from .connections import router as connections_router
-from .google_connections import router as google_connections_router
 from .database import SessionLocal, settings
+from .google_connections import router as google_connections_router
 from .routes import router as posts_router
 
 app = FastAPI(title="SnowSocial API", version="0.2.0")
