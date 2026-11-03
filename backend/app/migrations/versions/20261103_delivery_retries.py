@@ -1,8 +1,7 @@
 from alembic import op
-from sqlalchemy import Column, DateTime, inspect
-
 from app import models  # noqa: F401 - register current metadata
 from app.database import Base
+from sqlalchemy import Column, DateTime, inspect
 
 revision = "20261103_delivery_retries"
 down_revision = None
