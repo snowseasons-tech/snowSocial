@@ -68,6 +68,8 @@ services:
       TOKEN_ENCRYPTION_KEY: ${TOKEN_ENCRYPTION_KEY:-}
       X_CLIENT_ID: ${X_CLIENT_ID:-}
       X_CLIENT_SECRET: ${X_CLIENT_SECRET:-}
+      X_ANALYTICS_ENABLED: ${X_ANALYTICS_ENABLED:-false}
+      X_ANALYTICS_SYNC_INTERVAL_SECONDS: ${X_ANALYTICS_SYNC_INTERVAL_SECONDS:-604800}
     depends_on:
       db:
         condition: service_healthy
