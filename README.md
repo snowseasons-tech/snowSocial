@@ -23,4 +23,6 @@ Open `index.html` in a current browser. Posts created in the composer are saved 
 
 The optional worker service can be started with `docker compose --profile publishing up worker`. It will leave queued deliveries untouched until at least one channel publisher is registered in `backend/app/publishers.py`.
 
+Pull requests and pushes to `main` run GitHub Actions checks for frontend syntax, backend lint and syntax, database migrations, Compose configuration, and the API image build.
+
 The API supports draft creation and editing, approval, future scheduling, cancellation, and per-channel delivery records. The worker includes per-channel claiming, retry backoff, and a review-required state for interrupted attempts. It does not publish to social platforms until channel adapters are registered. The dashboard metrics and existing post examples remain sample data. Keep the API private until authentication is added.
