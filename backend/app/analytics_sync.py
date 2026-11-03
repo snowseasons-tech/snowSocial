@@ -357,6 +357,12 @@ GOOGLE_DAILY_METRICS = (
 GOOGLE_METRIC_FIELDS = ("impressions", "link_clicks", "calls", "direction_requests")
 
 
+def _google_count(value: object) -> int | None:
+    if isinstance(value, str) and value.isdigit():
+        value = int(value)
+    return _count(value)
+
+
 def _google_connection() -> ChannelConnection | None:
     location_id = os.getenv("GOOGLE_BUSINESS_LOCATION_ID", "").strip()
     statement = select(ChannelConnection).where(
@@ -454,7 +460,7 @@ def sync_google_business_metrics() -> tuple[int, int]:
                 month = point_date.replace(day=1)
                 if month not in totals_by_month:
                     continue
-                count = _count(dated_value.get("value"))
+                count = _google_count(dated_value.get("value"))
                 if count is not None:
                     totals_by_month[month][target_field] += count
 
