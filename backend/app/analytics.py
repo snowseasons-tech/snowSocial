@@ -13,10 +13,10 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from .database import get_session
-from .models import ChannelDelivery, DeliveryStatus, MonthlyPostMetric
+from .models import Channel, ChannelDelivery, DeliveryStatus, MonthlyChannelMetric, MonthlyPostMetric
 
 router = APIRouter(prefix="/api/analytics", tags=["analytics"])
-METRIC_FIELDS = ("impressions", "reach", "likes", "comments", "shares", "saves", "link_clicks")
+METRIC_FIELDS = ("impressions", "reach", "likes", "comments", "shares", "saves", "link_clicks", "calls", "direction_requests")
 
 
 class MetricImportItem(BaseModel):
@@ -29,6 +29,8 @@ class MetricImportItem(BaseModel):
     shares: int | None = Field(default=None, ge=0)
     saves: int | None = Field(default=None, ge=0)
     link_clicks: int | None = Field(default=None, ge=0)
+    calls: int | None = Field(default=None, ge=0)
+    direction_requests: int | None = Field(default=None, ge=0)
 
     @field_validator("month")
     @classmethod
@@ -58,6 +60,8 @@ class MetricTotals(BaseModel):
     shares: int | None
     saves: int | None
     link_clicks: int | None
+    calls: int | None
+    direction_requests: int | None
 
 
 class ChannelMetricSummary(BaseModel):
@@ -101,19 +105,47 @@ def _aggregate_month(session: Session, month: date) -> tuple[MetricTotals, list[
         .where(MonthlyPostMetric.month == month, ChannelDelivery.status == DeliveryStatus.PUBLISHED)
         .group_by(ChannelDelivery.channel)
     )
-    rows = session.execute(statement).all()
-    channel_totals: list[ChannelMetricSummary] = []
-    for row in rows:
+    channel_values: dict[str, dict[str, int | None]] = {}
+    for row in session.execute(statement).all():
         channel, post_count, *values = row
-        channel_totals.append(
-            ChannelMetricSummary(
-                channel=channel.value,
-                metrics=MetricTotals(
-                    published_posts=post_count,
-                    **dict(zip(METRIC_FIELDS, values, strict=True)),
-                ),
-            )
+        channel_values[channel.value] = {
+            "published_posts": post_count,
+            **dict(zip(METRIC_FIELDS, values, strict=True)),
+        }
+
+    profile_statement = (
+        select(
+            MonthlyChannelMetric.channel,
+            *(func.sum(getattr(MonthlyChannelMetric, field)) for field in METRIC_FIELDS),
         )
+        .where(MonthlyChannelMetric.month == month)
+        .group_by(MonthlyChannelMetric.channel)
+    )
+    next_month = date(month.year + 1, 1, 1) if month.month == 12 else date(month.year, month.month + 1, 1)
+    for row in session.execute(profile_statement).all():
+        channel, *values = row
+        summary = channel_values.setdefault(
+            channel,
+            {"published_posts": 0, **{field: None for field in METRIC_FIELDS}},
+        )
+        if channel == Channel.GOOGLE_BUSINESS.value:
+            published_posts = session.scalar(
+                select(func.count(ChannelDelivery.id)).where(
+                    ChannelDelivery.channel == Channel.GOOGLE_BUSINESS,
+                    ChannelDelivery.status == DeliveryStatus.PUBLISHED,
+                    ChannelDelivery.published_at >= datetime.combine(month, datetime.min.time(), tzinfo=UTC),
+                    ChannelDelivery.published_at < datetime.combine(next_month, datetime.min.time(), tzinfo=UTC),
+                )
+            )
+            summary["published_posts"] = published_posts or 0
+        for field, value in zip(METRIC_FIELDS, values, strict=True):
+            if value is not None:
+                summary[field] = (summary[field] or 0) + value
+
+    channel_totals = [
+        ChannelMetricSummary(channel=channel, metrics=MetricTotals(**values))
+        for channel, values in sorted(channel_values.items())
+    ]
     totals = MetricTotals(
         published_posts=sum(item.metrics.published_posts for item in channel_totals),
         **{
