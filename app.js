@@ -2,6 +2,7 @@
   const dialog = document.querySelector('#composer');
   const form = document.querySelector('#postForm');
   const caption = document.querySelector('#caption');
+  const mediaUrlInput = document.querySelector('#mediaUrl');
   const dateInput = document.querySelector('#publishDate');
   const timeInput = document.querySelector('#publishTime');
   const toast = document.querySelector('#toast');
@@ -284,6 +285,12 @@
       showToast('Instagram captions cannot exceed 2,200 characters.');
       return;
     }
+    const mediaUrl = mediaUrlInput.value.trim();
+    if (shouldSchedule && channels.includes('instagram') && !mediaUrl) {
+      mediaUrlInput.focus();
+      showToast('Add a public image URL before scheduling to Instagram.');
+      return;
+    }
     const scheduledAt = new Date(`${dateInput.value}T${timeInput.value}`);
     if (shouldSchedule && (!dateInput.value || !timeInput.value || scheduledAt <= new Date())) {
       showToast('Choose a future date and time for this post.');
@@ -295,7 +302,7 @@
     try {
       const created = await apiRequest('/api/posts', {
         method: 'POST',
-        body: JSON.stringify({ caption: caption.value.trim(), channels })
+        body: JSON.stringify({ caption: caption.value.trim(), channels, media_url: mediaUrl || null })
       });
       if (shouldSchedule) {
         await apiRequest(`/api/posts/${created.id}/approve`, { method: 'POST' });

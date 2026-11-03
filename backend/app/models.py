@@ -56,6 +56,7 @@ class Post(Base):
 
     id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
     caption: Mapped[str] = mapped_column(Text, nullable=False)
+    media_url: Mapped[str | None] = mapped_column(String(2048), nullable=True)
     channels: Mapped[list[str]] = mapped_column(JSON, nullable=False)
     status: Mapped[PostStatus] = mapped_column(
         SqlEnum(PostStatus, values_callable=lambda values: [item.value for item in values]),
