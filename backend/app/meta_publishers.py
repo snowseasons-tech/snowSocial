@@ -9,7 +9,11 @@ from sqlalchemy import select
 
 from .connections import ChannelConnection, decrypt_access_token
 from .database import SessionLocal
-from .publishers import AmbiguousPublishError, PermanentPublishError, RetryablePublishError
+from .publishers import (
+    AmbiguousPublishError,
+    PermanentPublishError,
+    RetryablePublishError,
+)
 
 
 class FacebookPagePublisher:
