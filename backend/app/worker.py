@@ -19,7 +19,6 @@ from .analytics_sync import (
 from .database import SessionLocal, settings
 from .google_publishers import GoogleBusinessPublisher
 from .linkedin_publishers import LinkedInOrganizationPublisher
-from .x_publishers import XUserPublisher
 from .meta_publishers import FacebookPagePublisher, InstagramPhotoPublisher
 from .models import Channel, ChannelDelivery, DeliveryStatus, Post, PostStatus
 from .publishers import (
@@ -28,6 +27,7 @@ from .publishers import (
     PermanentPublishError,
     RetryablePublishError,
 )
+from .x_publishers import XUserPublisher
 
 logger = logging.getLogger("snowsocial.worker")
 TERMINAL_DELIVERY_STATUSES = {DeliveryStatus.PUBLISHED, DeliveryStatus.FAILED, DeliveryStatus.NEEDS_REVIEW}
