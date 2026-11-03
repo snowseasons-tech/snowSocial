@@ -295,7 +295,7 @@
     try {
       const created = await apiRequest('/api/posts', {
         method: 'POST',
-        body: JSON.stringify({ caption: caption.value.trim(), channels })
+        body: JSON.stringify({ caption: caption.value.trim(), channels, media_url: mediaUrl || null })
       });
       if (shouldSchedule) {
         await apiRequest(`/api/posts/${created.id}/approve`, { method: 'POST' });
