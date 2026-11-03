@@ -11,7 +11,13 @@ from sqlalchemy import select
 from .connections import ChannelConnection, decrypt_access_token
 from .database import SessionLocal
 from .google_auth import get_google_access_token
-from .models import Channel, ChannelDelivery, DeliveryStatus, MonthlyChannelMetric, MonthlyPostMetric
+from .models import (
+    Channel,
+    ChannelDelivery,
+    DeliveryStatus,
+    MonthlyChannelMetric,
+    MonthlyPostMetric,
+)
 
 logger = logging.getLogger("snowsocial.analytics")
 GRAPH_VERSION = os.getenv("META_GRAPH_API_VERSION", "v26.0").strip()
