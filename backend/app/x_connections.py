@@ -38,9 +38,10 @@ def _frontend_redirect(result: str) -> RedirectResponse:
 
 
 @router.get("/authorize", include_in_schema=False)
-def begin_x_oauth(session: Session = Depends(get_session)) -> RedirectResponse:
+def begin_x_oauth(session: Session = Depends(get_session),  # noqa: B008
+) -> RedirectResponse:
     client_id = _setting("X_CLIENT_ID")
-    client_secret = _setting("X_CLIENT_SECRET")
+    _setting("X_CLIENT_SECRET")
     redirect_uri = _setting("X_REDIRECT_URI")
     cipher = _fernet()
     state = secrets.token_urlsafe(32)
@@ -75,7 +76,7 @@ def complete_x_oauth(
     code: str | None = Query(default=None, max_length=4096),
     state: str | None = Query(default=None, max_length=256),
     error: str | None = Query(default=None, max_length=128),
-    session: Session = Depends(get_session),
+    session: Session = Depends(get_session),  # noqa: B008
 ) -> RedirectResponse:
     if error or not code or not state:
         return _frontend_redirect("x_error")
