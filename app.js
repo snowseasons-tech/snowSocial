@@ -226,32 +226,87 @@
     showConnectionState(count ? `API connected · ${count} channel${count === 1 ? '' : 's'}` : 'API connected', true);
   }
 
+  function populateReportMonths() {
+    const input = document.querySelector('#analyticsMonth');
+    const now = new Date();
+    input.replaceChildren();
+    for (let offset = 0; offset < 12; offset += 1) {
+      const monthDate = new Date(now.getFullYear(), now.getMonth() - offset, 1);
+      const value = `${monthDate.getFullYear()}-${String(monthDate.getMonth() + 1).padStart(2, '0')}-01`;
+      const option = document.createElement('option');
+      option.value = value;
+      option.textContent = monthDate.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+      input.append(option);
+    }
+  }
+
   function updateAnalytics(summary) {
     const totals = summary.totals;
     document.querySelector('#reachMetric').textContent = formatNumber(totals.reach);
     setChange(document.querySelector('#reachChange'), summary.change_percent.reach);
-    const engagement = totals.reach && totals.likes !== null && totals.comments !== null && totals.shares !== null
-      ? ((totals.likes + totals.comments + totals.shares) * 100 / totals.reach)
-      : null;
+    const engagementChannels = summary.by_channel
+      .map((item) => item.metrics)
+      .filter((metrics) => metrics.reach !== null
+        && metrics.likes !== null
+        && metrics.comments !== null
+        && metrics.shares !== null);
+    const engagementReach = engagementChannels.reduce((sum, metrics) => sum + metrics.reach, 0);
+    const engagementActions = engagementChannels.reduce(
+      (sum, metrics) => sum + metrics.likes + metrics.comments + metrics.shares,
+      0
+    );
+    const engagement = engagementReach > 0 ? engagementActions * 100 / engagementReach : null;
     document.querySelector('#engagementMetric').textContent = engagement === null ? '—' : engagement.toFixed(1);
     setChange(document.querySelector('#engagementChange'), null);
+
     const monthLabel = new Date(summary.month).toLocaleDateString(undefined, {
       month: 'long', year: 'numeric', timeZone: 'UTC'
     });
-    const google = summary.by_channel.find((item) => item.channel === 'google_business')?.metrics;
-    const googleSummary = google
-      ? `Google Business Profile · ${formatNumber(google.impressions)} views · ${formatNumber(google.link_clicks)} website clicks · ${formatNumber(google.calls)} calls · ${formatNumber(google.direction_requests)} direction requests`
-      : null;
-    const linkedin = summary.by_channel.find((item) => item.channel === 'linkedin')?.metrics;
-    const linkedinSummary = linkedin
-      ? `LinkedIn · ${formatNumber(linkedin.impressions)} impressions · ${formatNumber(linkedin.reach)} unique impressions · ${formatNumber(linkedin.link_clicks)} clicks · ${formatNumber(linkedin.likes)} likes · ${formatNumber(linkedin.comments)} comments · ${formatNumber(linkedin.shares)} shares`
-      : null;
-    const reachSummary = totals.reach === null
-      ? 'Monthly metrics will appear after a metrics import.'
-      : `${formatNumber(totals.reach)} people reached in ${monthLabel}. Daily trend data is not available yet.`;
-    document.querySelector('#chartEmpty').textContent = [reachSummary, googleSummary, linkedinSummary]
-      .filter(Boolean)
-      .join('  |  ');
+    document.querySelector('#reportMonthLabel').textContent = monthLabel;
+    document.querySelector('#chartEmpty').textContent =
+      `${formatNumber(totals.published_posts)} posts published · ${formatNumber(totals.impressions)} impressions · ${formatNumber(totals.link_clicks)} clicks`;
+
+    const body = document.querySelector('#channelMetricsBody');
+    body.replaceChildren();
+    if (!summary.by_channel.length) {
+      const row = document.createElement('tr');
+      const cell = appendCell(row, 'No channel metrics are available for this month.', 'empty-row');
+      cell.colSpan = 10;
+      body.append(row);
+      return;
+    }
+    summary.by_channel.forEach((item) => {
+      const metrics = item.metrics;
+      const row = document.createElement('tr');
+      appendCell(row, channelLabel(item.channel), 'channel-name');
+      appendCell(row, formatNumber(metrics.published_posts));
+      appendCell(row, formatNumber(metrics.impressions));
+      appendCell(row, formatNumber(metrics.reach));
+      appendCell(row, formatNumber(metrics.link_clicks));
+      appendCell(row, formatNumber(metrics.likes));
+      appendCell(row, formatNumber(metrics.comments));
+      appendCell(row, formatNumber(metrics.shares));
+      appendCell(row, formatNumber(metrics.calls));
+      appendCell(row, formatNumber(metrics.direction_requests));
+      body.append(row);
+    });
+  }
+
+  async function loadMonthlyAnalytics(month) {
+    const chart = document.querySelector('#chartEmpty');
+    chart.textContent = 'Loading monthly metrics…';
+    try {
+      const summary = await apiRequest(`/api/analytics/monthly?month=${encodeURIComponent(month)}`);
+      updateAnalytics(summary);
+    } catch (error) {
+      console.warn('Monthly analytics are not available:', error);
+      chart.textContent = 'Monthly metrics are not available for this period.';
+      document.querySelector('#channelMetricsBody').replaceChildren();
+      const row = document.createElement('tr');
+      const cell = appendCell(row, 'Check the API connection and try again.', 'empty-row');
+      cell.colSpan = 10;
+      document.querySelector('#channelMetricsBody').append(row);
+    }
   }
 
   async function refreshWorkspace() {
@@ -267,14 +322,7 @@
       renderUpcoming();
       updateCounts();
       updateConnections(connections);
-      const now = new Date();
-      const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
-      try {
-        updateAnalytics(await apiRequest(`/api/analytics/monthly?month=${month}`));
-      } catch (error) {
-        console.warn('Monthly analytics are not available:', error);
-        document.querySelector('#chartEmpty').textContent = 'Monthly metrics are not available yet.';
-      }
+      await loadMonthlyAnalytics(document.querySelector('#analyticsMonth').value);
     } catch (error) {
       console.error('Could not load SnowSocial workspace:', error);
       showConnectionState('API unavailable');
@@ -338,6 +386,9 @@
     }
   }
 
+  document.querySelector('#analyticsMonth').addEventListener('change', (event) => {
+    void loadMonthlyAnalytics(event.target.value);
+  });
   document.querySelector('#newPost').addEventListener('click', openComposer);
   document.querySelector('#addToCalendar').addEventListener('click', openComposer);
   document.querySelector('#viewCalendar').addEventListener('click', () => {
@@ -374,5 +425,6 @@
   if (connectionResult === 'linkedin') showToast('LinkedIn organization connected.');
   if (connectionResult === 'linkedin_error') showToast('LinkedIn authorization was not completed.');
   if (connectionResult) window.history.replaceState({}, document.title, window.location.pathname);
+  populateReportMonths();
   void refreshWorkspace();
 })();
