@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import time
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from sqlalchemy import or_, select
@@ -28,7 +28,7 @@ class DeliveryJob:
 
 
 def utc_now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def reconcile_post_status(session: Session, post_id: UUID) -> None:
@@ -172,7 +172,7 @@ def process_job(job: DeliveryJob) -> None:
         fail_delivery(job, str(error), retryable=False)
     except RetryablePublishError as error:
         fail_delivery(job, str(error), retryable=True)
-    except Exception as error:
+    except Exception as error:  # noqa: BLE001 - provider SDKs raise varied transient exceptions
         logger.error("Publisher error for delivery %s (%s)", job.delivery_id, type(error).__name__)
         fail_delivery(job, "Unexpected provider error; retrying with backoff.", retryable=True)
     else:
