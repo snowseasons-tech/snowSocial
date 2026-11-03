@@ -20,9 +20,10 @@ from .connections import (
     _fernet,
     _required_setting,
 )
+from .auth import require_authenticated_user
 from .database import get_session
 
-router = APIRouter(prefix="/api/connections/google", tags=["connections"])
+router = APIRouter(prefix="/api/connections/google", tags=["connections"], dependencies=[Depends(require_authenticated_user)])
 
 
 def _request_google_locations(access_token: str) -> list[dict[str, str]]:
