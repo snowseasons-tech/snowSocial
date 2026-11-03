@@ -6,6 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session, selectinload
 
+from .auth import require_authenticated_user
 from .database import get_session
 from .models import Channel, ChannelDelivery, DeliveryStatus, Post, PostStatus, utc_now
 from .schemas import (
@@ -16,7 +17,7 @@ from .schemas import (
     validate_caption_for_channels,
 )
 
-router = APIRouter(prefix="/api/posts", tags=["posts"])
+router = APIRouter(prefix="/api/posts", tags=["posts"], dependencies=[Depends(require_authenticated_user)])
 
 
 def get_post(session: Session, post_id: UUID) -> Post:
