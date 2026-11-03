@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 
 from .analytics_sync import (
     sync_google_business_metrics,
+    sync_linkedin_metrics,
     sync_recent_facebook_metrics,
     sync_recent_instagram_metrics,
 )
@@ -243,8 +244,9 @@ def run_forever() -> None:
                     batch_size=settings.analytics_sync_batch_size
                 )
                 google_updated, google_failed = sync_google_business_metrics()
-                updated = instagram_updated + facebook_updated + google_updated
-                failed = instagram_failed + facebook_failed + google_failed
+                linkedin_updated, linkedin_failed = sync_linkedin_metrics()
+                updated = instagram_updated + facebook_updated + google_updated + linkedin_updated
+                failed = instagram_failed + facebook_failed + google_failed + linkedin_failed
                 if updated or failed:
                     logger.info("Analytics sync: %s monthly records updated, %s failed", updated, failed)
             except SQLAlchemyError:
