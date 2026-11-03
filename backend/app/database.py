@@ -13,6 +13,8 @@ class Settings(BaseSettings):
     worker_batch_size: int = Field(default=10, ge=1, le=100)
     max_delivery_attempts: int = Field(default=5, ge=1, le=20)
     claim_timeout_seconds: int = Field(default=900, ge=60, le=86400)
+    analytics_sync_interval_seconds: int = Field(default=86400, ge=3600, le=604800)
+    analytics_sync_batch_size: int = Field(default=50, ge=1, le=250)
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
 
