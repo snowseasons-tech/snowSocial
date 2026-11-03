@@ -15,6 +15,7 @@ from sqlalchemy import DateTime, String, UniqueConstraint, select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Mapped, Session, mapped_column
 
+from .auth import require_authenticated_user
 from .database import Base, get_session
 
 router = APIRouter(prefix="/api/connections", tags=["connections"], dependencies=[Depends(require_authenticated_user)])
