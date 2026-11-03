@@ -8,6 +8,7 @@ from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from pydantic import BaseModel, Field
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from .database import get_session
@@ -84,7 +85,7 @@ def login(
     ))
     try:
         session.commit()
-    except Exception:
+    except SQLAlchemyError:
         session.rollback()
         raise HTTPException(status_code=503, detail="Could not create sign-in session") from None
 
