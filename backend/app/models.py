@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from enum import Enum
+from enum import StrEnum
 from uuid import UUID, uuid4
 
 from sqlalchemy import JSON, DateTime, ForeignKey, String, Text, UniqueConstraint, Uuid
@@ -11,7 +11,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from .database import Base
 
 
-class PostStatus(str, Enum):
+class PostStatus(StrEnum):
     DRAFT = "draft"
     APPROVED = "approved"
     SCHEDULED = "scheduled"
@@ -21,14 +21,14 @@ class PostStatus(str, Enum):
     CANCELLED = "cancelled"
 
 
-class Channel(str, Enum):
+class Channel(StrEnum):
     FACEBOOK = "facebook"
     INSTAGRAM = "instagram"
     GOOGLE_BUSINESS = "google_business"
     LINKEDIN = "linkedin"
 
 
-class DeliveryStatus(str, Enum):
+class DeliveryStatus(StrEnum):
     QUEUED = "queued"
     PUBLISHING = "publishing"
     RETRY_WAIT = "retry_wait"
