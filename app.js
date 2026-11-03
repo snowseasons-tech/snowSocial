@@ -242,10 +242,14 @@
     const googleSummary = google
       ? `Google Business Profile · ${formatNumber(google.impressions)} views · ${formatNumber(google.link_clicks)} website clicks · ${formatNumber(google.calls)} calls · ${formatNumber(google.direction_requests)} direction requests`
       : null;
+    const linkedin = summary.by_channel.find((item) => item.channel === 'linkedin')?.metrics;
+    const linkedinSummary = linkedin
+      ? `LinkedIn · ${formatNumber(linkedin.impressions)} impressions · ${formatNumber(linkedin.reach)} unique impressions · ${formatNumber(linkedin.likes)} likes · ${formatNumber(linkedin.comments)} comments · ${formatNumber(linkedin.shares)} shares`
+      : null;
     const reachSummary = totals.reach === null
       ? 'Monthly metrics will appear after a metrics import.'
       : `${formatNumber(totals.reach)} people reached in ${monthLabel}. Daily trend data is not available yet.`;
-    document.querySelector('#chartEmpty').textContent = [reachSummary, googleSummary]
+    document.querySelector('#chartEmpty').textContent = [reachSummary, googleSummary, linkedinSummary]
       .filter(Boolean)
       .join('  |  ');
   }
