@@ -260,5 +260,7 @@ def disconnect(connection_id: UUID, session: Session = Depends(get_session)) -> 
 def decrypt_access_token(connection: ChannelConnection) -> str:
     try:
         return _fernet().decrypt(connection.encrypted_access_token.encode("ascii")).decode("utf-8")
+    except HTTPException as error:
+        raise ValueError(str(error.detail)) from error
     except (InvalidToken, UnicodeEncodeError) as error:
-        raise HTTPException(status_code=503, detail="Stored channel token could not be decrypted") from error
+        raise ValueError("Stored channel token could not be decrypted") from error
