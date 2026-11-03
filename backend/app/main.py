@@ -1,22 +1,12 @@
-from contextlib import asynccontextmanager
-
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 
-from . import models  # noqa: F401 - register SQLAlchemy models before schema creation
-from .database import Base, SessionLocal, engine
+from .database import SessionLocal
 from .routes import router as posts_router
 
-
-@asynccontextmanager
-async def lifespan(_: FastAPI):
-    Base.metadata.create_all(bind=engine)
-    yield
-
-
-app = FastAPI(title="SnowSocial API", version="0.1.0", lifespan=lifespan)
+app = FastAPI(title="SnowSocial API", version="0.2.0")
 app.include_router(posts_router)
 
 
