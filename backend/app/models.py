@@ -30,8 +30,10 @@ class Channel(str, Enum):
 class DeliveryStatus(str, Enum):
     QUEUED = "queued"
     PUBLISHING = "publishing"
+    RETRY_WAIT = "retry_wait"
     PUBLISHED = "published"
     FAILED = "failed"
+    NEEDS_REVIEW = "needs_review"
 
 
 def utc_now() -> datetime:
@@ -78,5 +80,8 @@ class ChannelDelivery(Base):
     platform_post_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_attempt_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    next_attempt_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, index=True)
+    claimed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now)
     post: Mapped[Post] = relationship(back_populates="deliveries")
