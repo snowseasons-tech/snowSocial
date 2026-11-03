@@ -45,7 +45,11 @@ def list_posts(
 
 @router.post("", response_model=PostRead, status_code=status.HTTP_201_CREATED)
 def create_post(payload: PostCreate, session: Session = Depends(get_session)) -> Post:
-    post = Post(caption=payload.caption, channels=[channel.value for channel in payload.channels])
+    post = Post(
+        caption=payload.caption,
+        media_url=payload.media_url,
+        channels=[channel.value for channel in payload.channels],
+    )
     try:
         session.add(post)
         session.commit()
@@ -65,6 +69,8 @@ def update_post(post_id: UUID, payload: PostUpdate, session: Session = Depends(g
         post.caption = changes["caption"].strip()
         if not post.caption:
             raise HTTPException(status_code=422, detail="Caption must contain non-whitespace text")
+    if "media_url" in changes:
+        post.media_url = changes["media_url"]
     if "channels" in changes and changes["channels"] is not None:
         channels = changes["channels"]
         if not channels:
@@ -107,6 +113,8 @@ def schedule_post(post_id: UUID, payload: ScheduleRequest, session: Session = De
     scheduled_at = payload.scheduled_at
     if scheduled_at.tzinfo is None:
         raise HTTPException(status_code=422, detail="scheduled_at must include a timezone offset")
+    if Channel.INSTAGRAM.value in post.channels and not post.media_url:
+        raise HTTPException(status_code=422, detail="Instagram posts require a public image URL")
     if scheduled_at <= datetime.now(UTC):
         raise HTTPException(status_code=422, detail="scheduled_at must be in the future")
     try:
