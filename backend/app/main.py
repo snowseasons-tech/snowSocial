@@ -11,6 +11,7 @@ from .database import SessionLocal, settings
 from .google_connections import router as google_connections_router
 from .linkedin_connections import router as linkedin_connections_router
 from .routes import router as posts_router
+from .x_connections import router as x_connections_router
 
 app = FastAPI(title="SnowSocial API", version="0.2.0")
 cors_origins = [origin.strip() for origin in settings.cors_origins.split(",") if origin.strip()]
@@ -27,6 +28,7 @@ app.include_router(posts_router)
 app.include_router(connections_router)
 app.include_router(google_connections_router)
 app.include_router(linkedin_connections_router)
+app.include_router(x_connections_router)
 app.include_router(analytics_router)
 
 

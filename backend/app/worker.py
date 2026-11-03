@@ -27,6 +27,7 @@ from .publishers import (
     PermanentPublishError,
     RetryablePublishError,
 )
+from .x_publishers import XUserPublisher
 
 logger = logging.getLogger("snowsocial.worker")
 TERMINAL_DELIVERY_STATUSES = {DeliveryStatus.PUBLISHED, DeliveryStatus.FAILED, DeliveryStatus.NEEDS_REVIEW}
@@ -34,6 +35,7 @@ PUBLISHERS[Channel.FACEBOOK] = FacebookPagePublisher()
 PUBLISHERS[Channel.INSTAGRAM] = InstagramPhotoPublisher()
 PUBLISHERS[Channel.GOOGLE_BUSINESS] = GoogleBusinessPublisher()
 PUBLISHERS[Channel.LINKEDIN] = LinkedInOrganizationPublisher()
+PUBLISHERS[Channel.X] = XUserPublisher()
 
 
 @dataclass(frozen=True)

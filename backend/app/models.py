@@ -36,6 +36,7 @@ class Channel(StrEnum):
     INSTAGRAM = "instagram"
     GOOGLE_BUSINESS = "google_business"
     LINKEDIN = "linkedin"
+    X = "x"
 
 
 class DeliveryStatus(StrEnum):

@@ -15,6 +15,11 @@ SnowSocial is a single-business social content planner for drafting posts, sched
 9. **LinkedIn organization publishing** — connect one company page and publish scheduled text posts. *(Merged.)*
 10. **LinkedIn monthly analytics** — import organic organization share statistics into monthly channel summaries. *(Merged.)*
 11. **Single-admin authentication** — protect the workspace and API with an administrator session. *(Merged.)*
+12. **X publishing** — connect one X account through OAuth 2.0 and publish scheduled text posts. *(This branch.)*
+
+## Connect X
+
+Set `X_CLIENT_ID`, `X_CLIENT_SECRET`, `X_REDIRECT_URI`, and `X_FRONTEND_URL`. In the X Developer Console, enable OAuth 2.0 with the exact callback URI and request `tweet.read`, `tweet.write`, `users.read`, and `offline.access`. The app connects one authorized X account and publishes text-only posts; media URLs cannot be selected for X in this release. X's developer platform currently uses usage-based billing for Post creation, so review current rates and credits before publishing.
 
 ## Run the dashboard prototype
 

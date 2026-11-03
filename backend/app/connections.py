@@ -55,6 +55,7 @@ class OAuthState(Base):
     state_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
     provider: Mapped[str] = mapped_column(String(32), nullable=False)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
+    encrypted_code_verifier: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
 
 class ConnectionRead(BaseModel):
