@@ -35,6 +35,7 @@
   };
   let posts = [];
   let toastTimer;
+  let showLoginScreen = null;
 
   async function apiRequest(path, options = {}) {
     let response;
@@ -60,6 +61,7 @@
       }
       const error = new Error(message);
       error.status = response.status;
+      if (response.status === 401 && path !== '/api/auth/login' && showLoginScreen) showLoginScreen();
       throw error;
     }
     if (response.status === 204) return null;
@@ -72,6 +74,7 @@
     const hide = () => { screen.style.display = 'none'; };
     try { await apiRequest('/api/auth/me'); document.body.classList.remove('auth-pending'); hide(); }
     catch (error) { if (error.status === 401) show(); else { show(error.message); return false; } }
+    showLoginScreen = () => show('Your session expired. Sign in again to continue.');
     form.addEventListener('submit', async (event) => {
       event.preventDefault(); const button = form.querySelector('button[type="submit"]'); button.disabled = true; errorBox.textContent = '';
       try { const values = new FormData(form); await apiRequest('/api/auth/login', {method:'POST', body:JSON.stringify({username:values.get('username'),password:values.get('password')})}); form.reset(); hide(); document.body.classList.remove('auth-pending'); await refreshWorkspace(); }

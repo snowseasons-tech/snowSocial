@@ -13,6 +13,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
+from .auth import require_authenticated_user
 from .connections import (
     OAUTH_STATE_TTL,
     ChannelConnection,
@@ -20,7 +21,6 @@ from .connections import (
     _fernet,
     _required_setting,
 )
-from .auth import require_authenticated_user
 from .database import get_session
 
 router = APIRouter(prefix="/api/connections/google", tags=["connections"], dependencies=[Depends(require_authenticated_user)])

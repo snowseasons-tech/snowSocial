@@ -14,7 +14,7 @@ SnowSocial is a single-business social content planner for drafting posts, sched
 8. **Google Business Profile publishing** — connect a profile, select a location, and publish scheduled standard Local Posts. *(Merged.)*
 9. **LinkedIn organization publishing** — connect one company page and publish scheduled text posts. *(Merged.)*
 10. **LinkedIn monthly analytics** — import organic organization share statistics into monthly channel summaries. *(Merged.)*
-11. **Single-admin authentication** — protect the workspace and API with an administrator session. *(This branch.)*
+11. **Single-admin authentication** — protect the workspace and API with an administrator session. *(Merged.)*
 
 ## Run the dashboard prototype
 
