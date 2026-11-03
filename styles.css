@@ -26,3 +26,11 @@
 
 .export-button{padding:7px 9px;font-size:10px;white-space:nowrap}
 .export-button:disabled{opacity:.5;cursor:not-allowed}
+
+.post-performance{margin-top:18px}
+.post-performance-heading{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:8px}
+.post-performance-heading h3{margin:0;font:600 12px 'DM Sans';color:var(--ink)}
+.post-performance-heading p{margin:0;color:var(--muted);font-size:10px}
+.post-performance-table{min-width:780px}
+.post-caption-cell{max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media(max-width:700px){.post-performance-heading{align-items:flex-start;flex-direction:column;gap:4px}}
