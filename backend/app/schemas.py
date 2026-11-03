@@ -64,6 +64,7 @@ class PostRead(BaseModel):
 
     id: UUID
     caption: str
+    media_url: str | None
     channels: list[str]
     status: PostStatus
     scheduled_at: datetime | None
