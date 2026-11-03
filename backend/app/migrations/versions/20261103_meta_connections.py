@@ -1,7 +1,7 @@
 """Add encrypted Meta channel connections and OAuth state."""
 
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 
 revision = "20261103_meta_connections"
 down_revision = "20261103_delivery_retries"
