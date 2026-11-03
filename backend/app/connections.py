@@ -190,7 +190,7 @@ def complete_meta_oauth(
     code: str | None = Query(default=None, max_length=4096),
     error: str | None = Query(default=None, max_length=128),
     session: Session = Depends(get_session),
-) -> dict[str, int | str]:
+) -> RedirectResponse:
     state_hash = hashlib.sha256(state.encode("utf-8")).hexdigest()
     oauth_state = session.scalar(select(OAuthState).where(OAuthState.state_hash == state_hash).with_for_update())
     now = datetime.now(UTC)
@@ -235,7 +235,8 @@ def complete_meta_oauth(
     except SQLAlchemyError as error:
         session.rollback()
         raise HTTPException(status_code=503, detail="Could not save Meta account connections") from error
-    return {"connected_accounts": len(accounts), "status": "connected"}
+    frontend_url = os.getenv("META_FRONTEND_URL", "http://localhost:8080").rstrip("/")
+    return RedirectResponse(f"{frontend_url}/?connection=meta", status_code=303)
 
 
 @router.get("", response_model=list[ConnectionRead])
