@@ -5,6 +5,7 @@ from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 
 from .analytics import router as analytics_router
+from .auth import router as auth_router
 from .connections import router as connections_router
 from .database import SessionLocal, settings
 from .google_connections import router as google_connections_router
@@ -19,7 +20,9 @@ if cors_origins:
         allow_origins=cors_origins,
         allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
         allow_headers=["Content-Type", "X-Analytics-Ingest-Token"],
+        allow_credentials=True,
     )
+app.include_router(auth_router)
 app.include_router(posts_router)
 app.include_router(connections_router)
 app.include_router(google_connections_router)
