@@ -17,6 +17,7 @@ from .analytics_sync import (
 )
 from .database import SessionLocal, settings
 from .google_publishers import GoogleBusinessPublisher
+from .linkedin_publishers import LinkedInOrganizationPublisher
 from .meta_publishers import FacebookPagePublisher, InstagramPhotoPublisher
 from .models import Channel, ChannelDelivery, DeliveryStatus, Post, PostStatus
 from .publishers import (
@@ -31,6 +32,7 @@ TERMINAL_DELIVERY_STATUSES = {DeliveryStatus.PUBLISHED, DeliveryStatus.FAILED, D
 PUBLISHERS[Channel.FACEBOOK] = FacebookPagePublisher()
 PUBLISHERS[Channel.INSTAGRAM] = InstagramPhotoPublisher()
 PUBLISHERS[Channel.GOOGLE_BUSINESS] = GoogleBusinessPublisher()
+PUBLISHERS[Channel.LINKEDIN] = LinkedInOrganizationPublisher()
 
 
 @dataclass(frozen=True)
