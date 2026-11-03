@@ -8,7 +8,13 @@ from sqlalchemy.orm import Session, selectinload
 
 from .database import get_session
 from .models import Channel, ChannelDelivery, DeliveryStatus, Post, PostStatus, utc_now
-from .schemas import PostCreate, PostRead, PostUpdate, ScheduleRequest
+from .schemas import (
+    PostCreate,
+    PostRead,
+    PostUpdate,
+    ScheduleRequest,
+    validate_caption_for_channels,
+)
 
 router = APIRouter(prefix="/api/posts", tags=["posts"])
 
@@ -66,6 +72,10 @@ def update_post(post_id: UUID, payload: PostUpdate, session: Session = Depends(g
         if len(set(channels)) != len(channels):
             raise HTTPException(status_code=422, detail="Each channel can only be selected once")
         post.channels = [channel.value for channel in channels]
+    try:
+        validate_caption_for_channels(post.caption, [Channel(channel) for channel in post.channels])
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
     try:
         session.commit()
         return get_post(session, post.id)

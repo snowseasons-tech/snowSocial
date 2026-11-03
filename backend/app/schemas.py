@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from .models import Channel, DeliveryStatus, PostStatus
 
@@ -25,10 +25,20 @@ class PostCreate(BaseModel):
             raise ValueError("Each channel can only be selected once")
         return value
 
+    @model_validator(mode="after")
+    def caption_must_fit_selected_channels(self) -> "PostCreate":
+        validate_caption_for_channels(self.caption, self.channels)
+        return self
+
 
 class PostUpdate(BaseModel):
     caption: str | None = Field(default=None, min_length=1, max_length=5000)
     channels: list[Channel] | None = Field(default=None, min_length=1, max_length=4)
+
+
+def validate_caption_for_channels(caption: str, channels: list[Channel]) -> None:
+    if Channel.INSTAGRAM in channels and len(caption) > 2200:
+        raise ValueError("Instagram captions cannot exceed 2,200 characters")
 
 
 class ScheduleRequest(BaseModel):

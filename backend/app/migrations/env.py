@@ -1,5 +1,5 @@
 from alembic import context
-from app import models  # noqa: F401 - register models for metadata
+from app import connections, models  # noqa: F401 - register models for metadata
 from app.database import Base, settings
 from sqlalchemy import engine_from_config, pool
 
