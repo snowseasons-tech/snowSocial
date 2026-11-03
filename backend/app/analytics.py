@@ -14,7 +14,6 @@ from sqlalchemy.orm import Session
 
 from .database import get_session
 from .models import (
-    Channel,
     ChannelDelivery,
     DeliveryStatus,
     MonthlyChannelMetric,
