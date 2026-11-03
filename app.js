@@ -244,7 +244,7 @@
       : null;
     const linkedin = summary.by_channel.find((item) => item.channel === 'linkedin')?.metrics;
     const linkedinSummary = linkedin
-      ? `LinkedIn · ${formatNumber(linkedin.impressions)} impressions · ${formatNumber(linkedin.reach)} unique impressions · ${formatNumber(linkedin.likes)} likes · ${formatNumber(linkedin.comments)} comments · ${formatNumber(linkedin.shares)} shares`
+      ? `LinkedIn · ${formatNumber(linkedin.impressions)} impressions · ${formatNumber(linkedin.reach)} unique impressions · ${formatNumber(linkedin.link_clicks)} clicks · ${formatNumber(linkedin.likes)} likes · ${formatNumber(linkedin.comments)} comments · ${formatNumber(linkedin.shares)} shares`
       : null;
     const reachSummary = totals.reach === null
       ? 'Monthly metrics will appear after a metrics import.'
