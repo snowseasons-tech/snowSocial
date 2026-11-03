@@ -8,6 +8,7 @@ from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 class Settings(BaseSettings):
     database_url: str = "sqlite:///./snowsocial.db"
+    cors_origins: str = ""
     worker_poll_seconds: int = Field(default=10, ge=1, le=300)
     worker_batch_size: int = Field(default=10, ge=1, le=100)
     max_delivery_attempts: int = Field(default=5, ge=1, le=20)
