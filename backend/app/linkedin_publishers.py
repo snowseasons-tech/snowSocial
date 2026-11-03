@@ -28,10 +28,6 @@ class LinkedInOrganizationPublisher:
             return False
 
     def publish(self, *, caption: str, idempotency_key: str, media_url: str | None = None) -> str:
-        if media_url:
-            raise PermanentPublishError(
-                "LinkedIn currently supports text-only publishing. Remove the image URL or publish to LinkedIn separately."
-            )
         with SessionLocal() as session:
             connection = self._connection(session)
             expires_at = connection.token_expires_at
@@ -46,7 +42,7 @@ class LinkedInOrganizationPublisher:
                 raise PermanentPublishError("The LinkedIn access token is unreadable. Reconnect the organization account.") from error
             author_urn = connection.provider_account_id
 
-        version = os.getenv("LINKEDIN_API_VERSION", "202611").strip()
+        version = os.getenv("LINKEDIN_API_VERSION", "202610").strip()
         if len(version) != 6 or not version.isdigit():
             raise PermanentPublishError("LINKEDIN_API_VERSION must use the YYYYMM format.")
         headers = {
