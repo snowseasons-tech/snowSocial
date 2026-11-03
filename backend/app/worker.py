@@ -13,7 +13,12 @@ from sqlalchemy.orm import Session
 from .database import SessionLocal, settings
 from .meta_publishers import FacebookPagePublisher
 from .models import Channel, ChannelDelivery, DeliveryStatus, Post, PostStatus
-from .publishers import AmbiguousPublishError, PUBLISHERS, PermanentPublishError, RetryablePublishError
+from .publishers import (
+    PUBLISHERS,
+    AmbiguousPublishError,
+    PermanentPublishError,
+    RetryablePublishError,
+)
 
 logger = logging.getLogger("snowsocial.worker")
 TERMINAL_DELIVERY_STATUSES = {DeliveryStatus.PUBLISHED, DeliveryStatus.FAILED, DeliveryStatus.NEEDS_REVIEW}
