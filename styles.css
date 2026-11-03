@@ -3,3 +3,19 @@
 @media(max-width:1050px){:root{--sidebar:215px}.page-wrap{padding:27px 24px}.topbar{padding:0 24px}.stats-grid{grid-template-columns:repeat(2,1fr)}.content-grid{grid-template-columns:1fr}.performance-panel{min-height:330px}}
 @media(max-width:680px){.sidebar{display:none}.main{margin:0}.topbar{height:56px;padding:0 16px}.mobile-brand{display:flex;align-items:center;gap:7px;font:800 15px Manrope;letter-spacing:-.4px}.mobile-brand .brand-mark{width:25px;height:25px;font-size:14px}.breadcrumb{display:none}.top-actions{gap:10px}.connection-state{font-size:0}.connection-state i{width:8px;height:8px}.page-wrap{padding:22px 15px}.welcome{align-items:flex-start;gap:12px}.welcome h1{font-size:20px}.welcome .muted{max-width:210px;font-size:11px}.welcome .primary-button{white-space:nowrap;padding:10px 11px;font-size:10px}.stats-grid{gap:9px}.stat-card{padding:13px;min-height:119px}.stat-top{font-size:10px}.stat-card>strong{font-size:22px}.mini-bars{right:12px;bottom:13px;gap:2px}.mini-bars i{width:3px}.scheduled-progress{left:13px;right:13px;bottom:14px}.panel{padding:15px 13px}.week-strip{gap:2px}.week-strip>button{font-size:17px}.day{height:42px}.agenda-item{gap:6px}.agenda-item time{width:46px;font-size:8px}.post-copy b{max-width:145px;font-size:9px}.status-pill{font-size:8px;padding:5px 6px}.more-button{padding:0 2px}.chart-legend{margin-left:22px;gap:10px}.recent-panel{padding-left:12px;padding-right:12px}table{min-width:600px}.demo-note{display:block;float:none;margin-top:5px}footer{line-height:1.6}}
 .connected-dot.is-disconnected{background:#c8ced8}.connection-state.is-connected i{background:#32b786}.connection-state.is-error i{background:#df6b6b}.status-pill.failed{background:#fff0f0;color:#b74747}.negative{color:#c55050}.chart-empty{min-height:193px;display:grid;place-items:center;padding:24px;text-align:center;color:#7a8496;font-size:12px;line-height:1.6}.media-url-input{width:100%;border:1px solid #dfe4eb;border-radius:7px;padding:9px;font:11px 'DM Sans'}.media-url-help{margin:6px 0 0;font-size:10px}.modal-actions button:disabled{opacity:.55;cursor:wait}
+
+
+/* Monthly report controls and responsive channel breakdown */
+.performance-panel{min-height:auto}
+.performance-panel .chart-empty{min-height:52px;padding:14px 18px}
+.month-picker{display:flex;align-items:center;gap:8px}
+.month-picker-label{font-size:10px;color:#818b9a;white-space:nowrap}
+.channel-metrics-wrap{margin-top:6px}
+.channel-metrics-table{width:100%;min-width:820px;border-collapse:collapse;font-size:10px}
+.channel-metrics-table th{padding:9px 10px;text-align:right;color:#8892a1;font-size:9px;letter-spacing:.45px;white-space:nowrap;border-bottom:1px solid var(--line)}
+.channel-metrics-table td{padding:10px;text-align:right;color:#566174;white-space:nowrap;border-bottom:1px solid #eef0f3}
+.channel-metrics-table th:first-child,.channel-metrics-table td:first-child{text-align:left}
+.channel-metrics-table tbody tr:last-child td{border-bottom:0}
+.channel-metrics-table .channel-name{font-weight:600;color:#303b4f}
+.channel-metrics-table .empty-row{text-align:center;color:#7a8496;padding:18px}
+@media(max-width:620px){.month-picker{gap:5px}.month-picker-label{display:none}.channel-metrics-table{min-width:760px}}
