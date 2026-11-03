@@ -13,7 +13,13 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from .database import get_session
-from .models import Channel, ChannelDelivery, DeliveryStatus, MonthlyChannelMetric, MonthlyPostMetric
+from .models import (
+    Channel,
+    ChannelDelivery,
+    DeliveryStatus,
+    MonthlyChannelMetric,
+    MonthlyPostMetric,
+)
 
 router = APIRouter(prefix="/api/analytics", tags=["analytics"])
 METRIC_FIELDS = ("impressions", "reach", "likes", "comments", "shares", "saves", "link_clicks", "calls", "direction_requests")
