@@ -23,7 +23,7 @@ META_DIALOG_URL = f"https://www.facebook.com/{META_GRAPH_VERSION}/dialog/oauth"
 META_GRAPH_URL = f"https://graph.facebook.com/{META_GRAPH_VERSION}"
 META_SCOPES = (
     "pages_show_list,pages_read_engagement,pages_manage_posts,"
-    "instagram_basic,instagram_content_publish"
+    "instagram_basic,instagram_content_publish,instagram_manage_insights"
 )
 OAUTH_STATE_TTL = timedelta(minutes=10)
 
