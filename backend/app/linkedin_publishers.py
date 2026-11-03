@@ -22,12 +22,6 @@ class LinkedInOrganizationPublisher:
         try:
             with SessionLocal() as session:
                 connection = self._connection(session)
-                expires_at = connection.token_expires_at
-                if expires_at is not None:
-                    if expires_at.tzinfo is None:
-                        expires_at = expires_at.replace(tzinfo=UTC)
-                    if expires_at <= datetime.now(UTC):
-                        return False
                 decrypt_access_token(connection)
             return True
         except (PermanentPublishError, ValueError):
