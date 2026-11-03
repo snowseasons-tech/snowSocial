@@ -35,6 +35,7 @@
     cancelled: 'Cancelled'
   };
   let posts = [];
+  let monthlySummary = null;
   let toastTimer;
   let showLoginScreen = null;
 
@@ -317,14 +318,70 @@
     });
   }
 
+  function csvCell(value) {
+    const text = value === null || value === undefined ? '' : String(value);
+    return `"${text.replaceAll('"', '""')}"`;
+  }
+
+  function downloadMonthlyCsv() {
+    if (!monthlySummary) {
+      showToast('Load a monthly report before exporting.');
+      return;
+    }
+    const fields = [
+      ['published_posts', 'Published Posts'],
+      ['impressions', 'Impressions'],
+      ['reach', 'Reach'],
+      ['link_clicks', 'Clicks'],
+      ['likes', 'Likes'],
+      ['comments', 'Comments'],
+      ['shares', 'Shares'],
+      ['saves', 'Saves'],
+      ['calls', 'Calls'],
+      ['direction_requests', 'Directions']
+    ];
+    const rows = [[
+      'Month',
+      'Channel',
+      ...fields.map(([, label]) => label)
+    ]];
+    const addMetricsRow = (month, channel, metrics) => {
+      rows.push([month, channel, ...fields.map(([field]) => metrics[field])]);
+    };
+    for (const channel of monthlySummary.by_channel) {
+      addMetricsRow(monthlySummary.month, channelLabel(channel.channel), channel.metrics);
+    }
+    addMetricsRow(monthlySummary.month, 'Total', monthlySummary.totals);
+    addMetricsRow(monthlySummary.previous_month, 'Previous month total', monthlySummary.previous_totals);
+    rows.push([
+      monthlySummary.month,
+      'Change (%)',
+      '',
+      ...fields.slice(1).map(([field]) => monthlySummary.change_percent[field])
+    ]);
+    const csv = `\uFEFF${rows.map((row) => row.map(csvCell).join(',')).join('\r\n')}`;
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `snowsocial-monthly-${monthlySummary.month.slice(0, 7)}.csv`;
+    document.body.append(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  }
+
   async function loadMonthlyAnalytics(month) {
     const chart = document.querySelector('#chartEmpty');
     chart.textContent = 'Loading monthly metrics…';
     try {
       const summary = await apiRequest(`/api/analytics/monthly?month=${encodeURIComponent(month)}`);
+      monthlySummary = summary;
+      document.querySelector('#exportMonthlyCsv').disabled = false;
       updateAnalytics(summary);
     } catch (error) {
       console.warn('Monthly analytics are not available:', error);
+      monthlySummary = null;
+      document.querySelector('#exportMonthlyCsv').disabled = true;
       chart.textContent = 'Monthly metrics are not available for this period.';
       document.querySelector('#channelMetricsBody').replaceChildren();
       const row = document.createElement('tr');
@@ -411,6 +468,7 @@
     }
   }
 
+  document.querySelector('#exportMonthlyCsv').addEventListener('click', downloadMonthlyCsv);
   document.querySelector('#analyticsMonth').addEventListener('change', (event) => {
     void loadMonthlyAnalytics(event.target.value);
   });
