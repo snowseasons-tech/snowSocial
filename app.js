@@ -235,9 +235,19 @@
       : null;
     document.querySelector('#engagementMetric').textContent = engagement === null ? '—' : engagement.toFixed(1);
     setChange(document.querySelector('#engagementChange'), null);
-    document.querySelector('#chartEmpty').textContent = totals.reach === null
+    const monthLabel = new Date(summary.month).toLocaleDateString(undefined, {
+      month: 'long', year: 'numeric', timeZone: 'UTC'
+    });
+    const google = summary.by_channel.find((item) => item.channel === 'google_business')?.metrics;
+    const googleSummary = google
+      ? `Google Business Profile · ${formatNumber(google.impressions)} views · ${formatNumber(google.link_clicks)} website clicks · ${formatNumber(google.calls)} calls · ${formatNumber(google.direction_requests)} direction requests`
+      : null;
+    const reachSummary = totals.reach === null
       ? 'Monthly metrics will appear after a metrics import.'
-      : `${formatNumber(totals.reach)} people reached in ${new Date(summary.month).toLocaleDateString(undefined, { month: 'long', year: 'numeric', timeZone: 'UTC' })}. Daily trend data is not available yet.`;
+      : `${formatNumber(totals.reach)} people reached in ${monthLabel}. Daily trend data is not available yet.`;
+    document.querySelector('#chartEmpty').textContent = [reachSummary, googleSummary]
+      .filter(Boolean)
+      .join('  |  ');
   }
 
   async function refreshWorkspace() {
