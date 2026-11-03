@@ -20,9 +20,10 @@ from .connections import (
     _fernet,
     _required_setting,
 )
+from .auth import require_authenticated_user
 from .database import get_session
 
-router = APIRouter(prefix="/api/connections/linkedin", tags=["connections"])
+router = APIRouter(prefix="/api/connections/linkedin", tags=["connections"], dependencies=[Depends(require_authenticated_user)])
 
 
 @router.get("/authorize", include_in_schema=False)

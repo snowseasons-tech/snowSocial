@@ -40,6 +40,7 @@
     let response;
     try {
       response = await fetch(`${API_BASE}${path}`, {
+        credentials: 'include',
         ...options,
         headers: {
           ...(options.body ? { 'Content-Type': 'application/json' } : {}),
@@ -57,10 +58,27 @@
       } catch (error) {
         console.warn('API returned a non-JSON error response:', error);
       }
-      throw new Error(message);
+      const error = new Error(message);
+      error.status = response.status;
+      throw error;
     }
     if (response.status === 204) return null;
     return response.json();
+  }
+
+  async function initializeAuth() {
+    const screen = document.querySelector('#authScreen'), form = document.querySelector('#loginForm'), errorBox = document.querySelector('#loginError');
+    const show = (message = '') => { document.body.classList.remove('auth-pending'); screen.style.display = 'flex'; errorBox.textContent = message; };
+    const hide = () => { screen.style.display = 'none'; };
+    try { await apiRequest('/api/auth/me'); document.body.classList.remove('auth-pending'); hide(); }
+    catch (error) { if (error.status === 401) show(); else { show(error.message); return false; } }
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault(); const button = form.querySelector('button[type="submit"]'); button.disabled = true; errorBox.textContent = '';
+      try { const values = new FormData(form); await apiRequest('/api/auth/login', {method:'POST', body:JSON.stringify({username:values.get('username'),password:values.get('password')})}); form.reset(); hide(); document.body.classList.remove('auth-pending'); await refreshWorkspace(); }
+      catch (error) { errorBox.textContent = error.message; } finally { button.disabled = false; }
+    });
+    document.querySelector('#logoutButton').addEventListener('click', async () => { try { await apiRequest('/api/auth/logout',{method:'POST'}); } finally { show('You have signed out.'); } });
+    return true;
   }
 
   function showToast(message) {
@@ -427,5 +445,5 @@
   if (connectionResult === 'linkedin_error') showToast('LinkedIn authorization was not completed.');
   if (connectionResult) window.history.replaceState({}, document.title, window.location.pathname);
   populateReportMonths();
-  void refreshWorkspace();
+  void initializeAuth().then((authenticated) => { if (authenticated) return refreshWorkspace(); });
 })();

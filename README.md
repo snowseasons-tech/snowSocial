@@ -13,7 +13,8 @@ SnowSocial is a single-business social content planner for drafting posts, sched
 7. **Instagram publishing** — publish single-image posts using a public HTTPS image URL and Meta's media-container flow. *(Merged.)*
 8. **Google Business Profile publishing** — connect a profile, select a location, and publish scheduled standard Local Posts. *(Merged.)*
 9. **LinkedIn organization publishing** — connect one company page and publish scheduled text posts. *(Merged.)*
-10. **LinkedIn monthly analytics** — import organic organization share statistics into monthly channel summaries. *(This branch.)*
+10. **LinkedIn monthly analytics** — import organic organization share statistics into monthly channel summaries. *(Merged.)*
+11. **Single-admin authentication** — protect the workspace and API with an administrator session. *(This branch.)*
 
 ## Run the dashboard prototype
 
@@ -21,7 +22,7 @@ Serve the dashboard at `http://localhost:8080` (for example, `python3 -m http.se
 
 ## Run the API and PostgreSQL locally
 
-1. Copy `.env.example` to `.env` and set a long alphanumeric `POSTGRES_PASSWORD`.
+1. Copy `.env.example` to `.env` and set a long alphanumeric `POSTGRES_PASSWORD`, `SNOWSOCIAL_ADMIN_USERNAME`, and a long unique `SNOWSOCIAL_ADMIN_PASSWORD`. Set `SNOWSOCIAL_COOKIE_SECURE=true` when serving the dashboard over HTTPS. The API issues a 12-hour HttpOnly session cookie; post, connection, and monthly-report routes require sign-in. `/api/health` stays public, and metric imports continue to use `ANALYTICS_INGEST_TOKEN`.
 2. Run `docker compose up --build`.
 3. Open `http://127.0.0.1:8000/docs` to inspect the API.
 4. Check `http://127.0.0.1:8000/api/health` for the database health response.

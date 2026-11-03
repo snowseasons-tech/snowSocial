@@ -143,3 +143,10 @@ class MonthlyChannelMetric(Base):
     calls: Mapped[int | None] = mapped_column(Integer, nullable=True)
     direction_requests: Mapped[int | None] = mapped_column(Integer, nullable=True)
     imported_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now)
+
+
+class AuthSession(Base):
+    __tablename__ = "auth_sessions"
+    token_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)

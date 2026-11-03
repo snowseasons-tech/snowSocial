@@ -8,7 +8,8 @@
   <title>SnowSocial — Content Planner</title>
   <link rel="stylesheet" href="styles.css">
 </head>
-<body>
+<body class="auth-pending">
+  <section class="auth-screen" id="authScreen" aria-labelledby="authTitle"><form class="auth-card" id="loginForm"><div class="brand-mark">S</div><p class="eyebrow">SNOWSOCIAL WORKSPACE</p><h1 id="authTitle">Sign in</h1><p class="muted">Use your administrator credentials to open this business workspace.</p><label for="loginUsername">Username</label><input id="loginUsername" name="username" autocomplete="username" required maxlength="128"><label for="loginPassword">Password</label><input id="loginPassword" name="password" type="password" autocomplete="current-password" required maxlength="1024"><p class="auth-error" id="loginError" role="alert"></p><button class="primary-button" type="submit">Sign in</button></form></section>
   <aside class="sidebar" aria-label="Main navigation">
     <a class="brand" href="#overview"><span class="brand-mark">S</span><span>snow<span class="brand-light">social</span></span></a>
     <div class="workspace-label">WORKSPACE</div>
@@ -26,6 +27,7 @@
       <div class="channel-row" data-channel="google_business"><i class="channel-icon gbp">G</i><span>Google Business</span><b class="connected-dot is-disconnected"></b></div>
       <div class="channel-row" data-channel="linkedin"><i class="channel-icon in">in</i><span>LinkedIn</span><b class="connected-dot is-disconnected"></b></div>
       <button class="profile"><span class="profile-avatar">EB</span><span><b>Eric Brooks</b><small>Account owner</small></span><span class="chevron">···</span></button>
+      <button class="signout-button" id="logoutButton" type="button">Sign out</button>
     </div>
   </aside>
 
