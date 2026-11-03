@@ -26,7 +26,7 @@ class ChannelPublisher(Protocol):
     def is_available(self) -> bool:
         """Return whether this adapter has an unambiguous connected destination."""
 
-    def publish(self, *, caption: str, idempotency_key: str) -> str:
+    def publish(self, *, caption: str, idempotency_key: str, media_url: str | None = None) -> str:
         """Publish content and return the provider's post ID."""
 
 
