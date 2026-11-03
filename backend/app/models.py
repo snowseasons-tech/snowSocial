@@ -1,16 +1,17 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from enum import Enum
+from datetime import UTC, datetime
+from enum import StrEnum
 from uuid import UUID, uuid4
 
-from sqlalchemy import JSON, DateTime, Enum as SqlEnum, ForeignKey, String, Text, UniqueConstraint, Uuid
+from sqlalchemy import JSON, DateTime, ForeignKey, String, Text, UniqueConstraint, Uuid
+from sqlalchemy import Enum as SqlEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .database import Base
 
 
-class PostStatus(str, Enum):
+class PostStatus(StrEnum):
     DRAFT = "draft"
     APPROVED = "approved"
     SCHEDULED = "scheduled"
@@ -20,22 +21,24 @@ class PostStatus(str, Enum):
     CANCELLED = "cancelled"
 
 
-class Channel(str, Enum):
+class Channel(StrEnum):
     FACEBOOK = "facebook"
     INSTAGRAM = "instagram"
     GOOGLE_BUSINESS = "google_business"
     LINKEDIN = "linkedin"
 
 
-class DeliveryStatus(str, Enum):
+class DeliveryStatus(StrEnum):
     QUEUED = "queued"
     PUBLISHING = "publishing"
+    RETRY_WAIT = "retry_wait"
     PUBLISHED = "published"
     FAILED = "failed"
+    NEEDS_REVIEW = "needs_review"
 
 
 def utc_now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 class Post(Base):
@@ -78,5 +81,8 @@ class ChannelDelivery(Base):
     platform_post_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_attempt_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    next_attempt_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, index=True)
+    claimed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now)
     post: Mapped[Post] = relationship(back_populates="deliveries")

@@ -45,6 +45,8 @@ class DeliveryRead(BaseModel):
     platform_post_id: str | None
     error_message: str | None
     published_at: datetime | None
+    last_attempt_at: datetime | None
+    next_attempt_at: datetime | None
 
 
 class PostRead(BaseModel):

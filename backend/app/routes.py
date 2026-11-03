@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -97,10 +97,10 @@ def schedule_post(post_id: UUID, payload: ScheduleRequest, session: Session = De
     scheduled_at = payload.scheduled_at
     if scheduled_at.tzinfo is None:
         raise HTTPException(status_code=422, detail="scheduled_at must include a timezone offset")
-    if scheduled_at <= datetime.now(timezone.utc):
+    if scheduled_at <= datetime.now(UTC):
         raise HTTPException(status_code=422, detail="scheduled_at must be in the future")
     try:
-        post.scheduled_at = scheduled_at.astimezone(timezone.utc)
+        post.scheduled_at = scheduled_at.astimezone(UTC)
         post.status = PostStatus.SCHEDULED
         post.deliveries = [
             ChannelDelivery(channel=Channel(channel_name), status=DeliveryStatus.QUEUED)
