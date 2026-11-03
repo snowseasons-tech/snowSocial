@@ -32,4 +32,4 @@ The dashboard now loads posts, account connections, and monthly totals from the 
 
 Pull requests and pushes to `main` run GitHub Actions checks for frontend syntax, backend lint and syntax, database migrations, Compose configuration, and the API image build.
 
-The API supports draft creation and editing, approval, future scheduling, cancellation, per-channel delivery records, connected Meta accounts, and monthly metric summaries. The dashboard reads posts, connection state, and summary totals from the API. The worker publishes text posts to Facebook Pages; Instagram, Google Business Profile, and LinkedIn still need adapters. The API has no general user authentication, so keep it private.
+The API supports draft creation and editing, approval, future scheduling, cancellation, per-channel delivery records, connected Meta accounts, and monthly metric summaries. The dashboard reads posts, connection state, and summary totals from the API. The worker publishes text posts to Facebook Pages and single-image feed posts to Instagram; Google Business Profile and LinkedIn still need adapters. The API has no general user authentication, so keep it private.
