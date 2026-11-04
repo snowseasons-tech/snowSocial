@@ -1,0 +1,7 @@
+# Real secrets live in .env (copied from .env.example); this repo is public
+.env
+.env.*
+!.env.example
+.venv/
+__pycache__/
+*.pyc
